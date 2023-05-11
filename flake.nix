@@ -195,6 +195,7 @@
         });
 
       hydraJobs = {
+        build = forAllSystems ({ system, pkgs, ... }: self.packages.${system}.default);
         vm-test = import ./nix/tests/vm-test {
           inherit forSystem;
           inherit (nix.hydraJobs) binaryTarball;
