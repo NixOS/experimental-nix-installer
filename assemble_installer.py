@@ -1,11 +1,29 @@
+import os
 import requests
 import subprocess
 import shutil
 import sys
+import tempfile
+import tomllib
 
 response = requests.get('https://hydra.nixos.org/jobset/experimental-nix-installer/experimental-installer/evals', headers={'Accept': 'application/json'})
 
-hydra_eval = response.json()['evals'][0]
+evals = response.json()['evals']
+eval_id = int(os.getenv("TESTING_HYDRA_EVAL_ID"))
+if eval_id is not None:
+    ids = [eval['id'] for eval in evals]
+    hydra_eval = next( eval for eval in evals if eval['id'] == eval_id )
+else:
+    hydra_eval = evals[0]
+
+    rev = subprocess.run(
+        ["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE, check=True, text=True
+    ).stdout.strip()
+
+    if not rev in hydra_eval["flake"]:
+        raise RuntimeError(
+            f"Expected flake with rev {rev} but found flake {hydra_eval['flake']}"
+        )
 
 installers = []
 
@@ -22,10 +40,35 @@ for build_id in hydra_eval['builds']:
             subprocess.call(f"nix-store -r {installer_url}", shell=True)
         installers.append((installer_url, system))
     else:
+        print(
+            f"Build {build_id} not finished. Check status at https://hydra.nixos.org/eval/{hydra_eval['id']}#tabs-unfinished"
+        )
         sys.exit(0)
 
-subprocess.run(["git", "fetch", "origin", "prerelease"], check=True)
-subprocess.run(["git", "checkout", "-b", "prerelease", "origin/prerelease"], check=True)
+with open("Cargo.toml", "rb") as f:
+    cargo_toml = tomllib.load(f)
+version = cargo_toml["package"]["version"]
 
-for installer_url, system in installers:
-    shutil.copy(f"{installer_url}/bin/nix-installer", f"nix-installer-{system}")
+with tempfile.TemporaryDirectory() as tmpdirname:
+    release_files = []
+    for installer_url, system in installers:
+        installer_file = f"{tmpdirname}/nix-installer-{system}"
+        release_files.append(installer_file)
+        print(f"Copying {installer_url} to {installer_file}")
+        shutil.copy(f"{installer_url}/bin/nix-installer", installer_file)
+    release_files.append("nix-installer.sh")
+    subprocess.run(
+        [
+            "gh",
+            "release",
+            "create",
+            "--notes",
+            f"Release experimental nix installer v{version}",
+            "--title",
+            f"v{version}",
+            "--draft",
+            version,
+            *release_files,
+        ],
+        check=True,
+    )

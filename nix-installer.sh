@@ -25,7 +25,7 @@ fi
 set -u
 
 # If NIX_INSTALLER_FORCE_ALLOW_HTTP is unset or empty, default it.
-NIX_INSTALLER_BINARY_ROOT="${NIX_INSTALLER_BINARY_ROOT:-https://raw.githubusercontent.com/NixOS/experimental-nix-installer/prerelease}"
+NIX_INSTALLER_BINARY_ROOT="${NIX_INSTALLER_BINARY_ROOT:-https://github.com/NixOS/experimental-nix-installer/releases/download/0.27.0}"
 
 main() {
     downloader --check
