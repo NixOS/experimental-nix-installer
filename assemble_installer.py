@@ -6,6 +6,8 @@ import sys
 import tempfile
 import tomllib
 
+from string import Template
+
 response = requests.get('https://hydra.nixos.org/jobset/experimental-nix-installer/experimental-installer/evals', headers={'Accept': 'application/json'})
 
 evals = response.json()['evals']
@@ -56,7 +58,22 @@ with tempfile.TemporaryDirectory() as tmpdirname:
         release_files.append(installer_file)
         print(f"Copying {installer_url} to {installer_file}")
         shutil.copy(f"{installer_url}/bin/nix-installer", installer_file)
-    release_files.append("nix-installer.sh")
+
+    # Subsitute version in nix-installer.sh
+    original_file = "nix-installer.sh"
+
+    with open(original_file, "r") as nix_installer_sh:
+        nix_installer_sh_contents = nix_installer_sh.read()
+
+    template = Template(nix_installer_sh_contents)
+    updated_content = template.substitute(assemble_installer_templated_version=version)
+
+    # Write the modified content to the output file
+    substituted_file=f"{tmpdirname}/nix-installer.sh"
+    with open(substituted_file, "w", encoding="utf-8") as output_file:
+        output_file.write(updated_content)
+    release_files.append(substituted_file)
+
     subprocess.run(
         [
             "gh",
