@@ -10,10 +10,6 @@ let
     NIX_PATH=$(readlink -f nix.tar.xz)
     RUST_BACKTRACE="full" ./nix-installer install --nix-package-url "file://$NIX_PATH" --no-confirm
   '';
-  nix-installer-install-determinate = ''
-    NIX_PATH=$(readlink -f nix.tar.xz)
-    RUST_BACKTRACE="full" ./nix-installer install --nix-package-url "file://$NIX_PATH" --no-confirm --logger pretty --log-directive nix_installer=trace --determinate
-  '';
   cure-script-multi-user = ''
     tar xvf nix.tar.xz
     ./nix-*/install --no-channel-add --yes --daemon
@@ -203,24 +199,6 @@ let
       check = installCases.install-default.check + ''
         grep --quiet "^# foobar" /etc/nix/nix.custom.conf
       '';
-      uninstall = installCases.install-default.uninstall;
-      uninstallCheck = installCases.install-default.uninstallCheck;
-    };
-    install-determinate = {
-      install = nix-installer-install-determinate;
-      check = ''
-        if ! systemctl is-active determinate-nixd.socket; then
-          echo "determinate-nixd.socket is not active"
-          sudo journalctl -eu determinate-nixd.socket
-          exit 1
-        fi
-
-        if ! determinate-nixd status; then
-          echo "determinate-nixd is not working"
-          sudo journalctl -eu determinate-nixd.service
-          exit 1
-        fi
-      '' + installCases.install-default.check;
       uninstall = installCases.install-default.uninstall;
       uninstallCheck = installCases.install-default.uninstallCheck;
     };
@@ -511,9 +489,6 @@ let
       rootDisk = "box.img";
       upstreamScriptsWork = false; # SELinux!
       system = "x86_64-linux";
-      skip = [
-        "install-determinate" # RHEL v7 has systemd 219 (2015-02-16); determinate-nixd requires at least 227 (2015-10-07)
-      ];
     };
 
     "rhel-v8" = {
