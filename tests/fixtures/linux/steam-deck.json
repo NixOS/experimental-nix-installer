@@ -61,8 +61,7 @@
             "url_or_path": null,
             "dest": "/nix/temp-install-dir",
             "proxy": null,
-            "ssl_cert_file": null,
-            "distribution": "Nix"
+            "ssl_cert_file": null
           },
           "state": "Completed"
         },
@@ -1189,8 +1188,6 @@
     "planner": "steam-deck",
     "persistence": "/home/nix",
     "settings": {
-      "determinate_nix": false,
-      "prefer_upstream": true,
       "modify_profile": true,
       "nix_build_group_name": "nixbld",
       "nix_build_group_id": 30000,
