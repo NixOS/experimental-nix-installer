@@ -4,7 +4,7 @@ use crate::action::{
         BootstrapLaunchctlService, CreateApfsVolume, CreateSyntheticObjects, EnableOwnership,
         EncryptApfsVolume, UnmountApfsVolume,
     },
-    distribution::Distribution,
+    Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction,
 };
 use std::{
     path::{Path, PathBuf},
@@ -48,7 +48,6 @@ impl CreateNixVolume {
         name: String,
         case_sensitive: bool,
         encrypt: bool,
-        distribution: Distribution,
     ) -> Result<StatefulAction<Self>, ActionError> {
         let disk = disk.as_ref();
         let create_or_append_synthetic_conf = CreateOrInsertIntoFile::plan(
@@ -83,7 +82,7 @@ impl CreateNixVolume {
             .map_err(Self::error)?;
 
         let encrypt_volume = if encrypt {
-            Some(EncryptApfsVolume::plan(distribution, disk, &name, &create_volume).await?)
+            Some(EncryptApfsVolume::plan(disk, &name, &create_volume).await?)
         } else {
             None
         };

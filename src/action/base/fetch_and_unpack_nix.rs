@@ -6,7 +6,6 @@ use tracing::{span, Span};
 
 use crate::{
     action::{Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction},
-    distribution::{Distribution, TarballLocation},
     parse_ssl_cert,
     settings::UrlOrPath,
     util::OnMissing,
@@ -18,8 +17,7 @@ Fetch a URL to the given path
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 #[serde(tag = "action_name", rename = "fetch_and_unpack_nix")]
 pub struct FetchAndUnpackNix {
-    distribution: Distribution,
-    url_or_path: Option<UrlOrPath>,
+    url_or_path: UrlOrPath,
     dest: PathBuf,
     proxy: Option<Url>,
     ssl_cert_file: Option<PathBuf>,
@@ -28,8 +26,7 @@ pub struct FetchAndUnpackNix {
 impl FetchAndUnpackNix {
     #[tracing::instrument(level = "debug", skip_all)]
     pub async fn plan(
-        distribution: Distribution,
-        url_or_path: Option<UrlOrPath>,
+        url_or_path: UrlOrPath,
         dest: PathBuf,
         proxy: Option<Url>,
         ssl_cert_file: Option<PathBuf>,
@@ -37,7 +34,7 @@ impl FetchAndUnpackNix {
         // TODO(@hoverbear): Check URL exists?
         // TODO(@hoverbear): Check tempdir exists
 
-        if let Some(UrlOrPath::Url(url)) = &url_or_path {
+        if let UrlOrPath::Url(url) = &url_or_path {
             match url.scheme() {
                 "https" | "http" | "file" => (),
                 _ => return Err(Self::error(ActionErrorKind::UnknownUrlScheme)),
@@ -56,7 +53,6 @@ impl FetchAndUnpackNix {
         }
 
         Ok(Self {
-            distribution,
             url_or_path,
             dest,
             proxy,
@@ -73,15 +69,14 @@ impl Action for FetchAndUnpackNix {
         ActionTag("fetch_and_unpack_nix")
     }
     fn tracing_synopsis(&self) -> String {
-        let TarballLocation::UrlOrPath(uop) = self.distribution.tarball_location_or(&self.url_or_path);
-        format!("Fetch `{}` to `{}`", uop, self.dest.display())
+        format!("Fetch `{}` to `{}`", self.url_or_path, self.dest.display())
     }
 
     fn tracing_span(&self) -> Span {
         let span = span!(
             tracing::Level::DEBUG,
             "fetch_and_unpack_nix",
-            url_or_path = self.url_or_path.as_ref().map(tracing::field::display),
+            url_or_path = tracing::field::display(&self.url_or_path),
             proxy = tracing::field::Empty,
             ssl_cert_file = tracing::field::Empty,
             dest = tracing::field::display(self.dest.display()),
@@ -104,8 +99,7 @@ impl Action for FetchAndUnpackNix {
 
     #[tracing::instrument(level = "debug", skip_all)]
     async fn execute(&mut self) -> Result<(), ActionError> {
-        let TarballLocation::UrlOrPath(url_or_path) = self.distribution.tarball_location_or(&self.url_or_path);
-        let bytes = match url_or_path {
+        let bytes = match &self.url_or_path {
             UrlOrPath::Url(url) => {
                 let bytes = match url.scheme() {
                     "https" | "http" => {
@@ -153,9 +147,9 @@ impl Action for FetchAndUnpackNix {
                 bytes
             },
             UrlOrPath::Path(path) => {
-                let buf = tokio::fs::read(&path)
+                let buf = tokio::fs::read(path)
                     .await
-                    .map_err(|e| ActionErrorKind::Read(path, e))
+                    .map_err(|e| ActionErrorKind::Read(path.clone(), e))
                     .map_err(Self::error)?;
                 Bytes::from(buf)
             },

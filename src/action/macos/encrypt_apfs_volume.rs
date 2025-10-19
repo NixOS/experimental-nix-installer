@@ -5,7 +5,6 @@ use crate::{
         macos::NIX_VOLUME_MOUNTD_DEST, Action, ActionDescription, ActionError, ActionErrorKind,
         ActionState, ActionTag, StatefulAction,
     },
-    distribution::Distribution,
     execute_command,
     os::darwin::DiskUtilApfsListOutput,
 };
@@ -25,7 +24,6 @@ Encrypt an APFS volume
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 #[serde(tag = "action_name", rename = "encrypt_apfs_volume")]
 pub struct EncryptApfsVolume {
-    distribution: Distribution,
     disk: PathBuf,
     name: String,
 }
@@ -33,7 +31,6 @@ pub struct EncryptApfsVolume {
 impl EncryptApfsVolume {
     #[tracing::instrument(level = "debug", skip_all)]
     pub async fn plan(
-        distribution: Distribution,
         disk: impl AsRef<Path>,
         name: impl AsRef<str>,
         planned_create_apfs_volume: &StatefulAction<CreateApfsVolume>,
@@ -63,11 +60,7 @@ impl EncryptApfsVolume {
             // The user has a password matching what we would create.
             if planned_create_apfs_volume.state == ActionState::Completed {
                 // We detected a created volume already, and a password exists, so we can keep using that and skip doing anything
-                return Ok(StatefulAction::completed(Self {
-                    distribution,
-                    name,
-                    disk,
-                }));
+                return Ok(StatefulAction::completed(Self { name, disk }));
             }
 
             // Ask the user to remove it
@@ -110,17 +103,12 @@ impl EncryptApfsVolume {
             for volume in container.volumes {
                 if volume.name.as_ref() == Some(&name) && volume.file_vault.unwrap_or(false) {
                     return Ok(StatefulAction::completed(Self {
-                        distribution,
                         disk, name }));
                 }
             }
         }
 
-        Ok(StatefulAction::uncompleted(Self {
-            distribution,
-            name,
-            disk,
-        }))
+        Ok(StatefulAction::uncompleted(Self { name, disk }))
     }
 }
 

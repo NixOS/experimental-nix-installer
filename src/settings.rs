@@ -9,11 +9,11 @@ use clap::{
 };
 use url::Url;
 
-use crate::distribution::Distribution;
-
 pub const SCRATCH_DIR: &str = "/nix/temp-install-dir";
 
 pub const DEFAULT_NIX_BUILD_USER_GROUP_NAME: &str = "nixbld";
+
+pub const NIX_TARBALL_URL: &str = env!("NIX_TARBALL_URL");
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
@@ -353,10 +353,6 @@ impl CommonSettings {
         Ok(map)
     }
 
-    pub fn distribution(&self) -> Distribution {
-        // This installer only supports upstream Nix
-        Distribution::Nix
-    }
 }
 
 async fn linux_detect_systemd_started() -> bool {

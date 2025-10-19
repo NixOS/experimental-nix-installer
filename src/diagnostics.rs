@@ -222,11 +222,7 @@ impl crate::feedback::Feedback for DiagnosticData {
         self.ids_client
             .set_fact(
                 "install_determinate_nix",
-                planner
-                    .common_settings()
-                    .distribution()
-                    .is_determinate()
-                    .into(),
+                false.into(),
             )
             .await;
 

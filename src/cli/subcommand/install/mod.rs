@@ -119,7 +119,7 @@ impl CommandExecute for Install {
                 .wrap_err("Reading plan")?;
             serde_json::from_str(&install_plan_string)?
         } else {
-            let mut planner = match maybe_planner {
+            let planner = match maybe_planner {
                 Some(planner) => planner,
                 None => BuiltinPlanner::from_common_settings(settings.clone())
                     .await

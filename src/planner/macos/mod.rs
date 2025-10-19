@@ -214,7 +214,6 @@ impl Planner for Macos {
                 self.volume_label.clone(),
                 self.case_sensitive,
                 encrypt,
-                self.settings.distribution(),
             )
             .await
             .map_err(PlannerError::Action)?
