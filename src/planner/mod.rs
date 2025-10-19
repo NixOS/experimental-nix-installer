@@ -405,9 +405,6 @@ pub enum PlannerError {
     /// Failed to execute command
     #[error("Failed to execute command `{0}`")]
     Command(String, #[source] std::io::Error),
-    #[cfg(feature = "diagnostics")]
-    #[error(transparent)]
-    Diagnostic(#[from] crate::diagnostics::DiagnosticError),
 }
 
 impl HasExpectedErrors for PlannerError {
@@ -439,16 +436,6 @@ impl HasExpectedErrors for PlannerError {
             this @ PlannerError::NixExists => Some(Box::new(this)),
             this @ PlannerError::Wsl1 => Some(Box::new(this)),
             PlannerError::Command(_, _) => None,
-            #[cfg(feature = "diagnostics")]
-            PlannerError::Diagnostic(diagnostic_error) => Some(Box::new(diagnostic_error)),
         }
-    }
-}
-
-#[cfg(feature = "diagnostics")]
-impl crate::diagnostics::ErrorDiagnostic for PlannerError {
-    fn diagnostic(&self) -> String {
-        let static_str: &'static str = (self).into();
-        static_str.to_string()
     }
 }

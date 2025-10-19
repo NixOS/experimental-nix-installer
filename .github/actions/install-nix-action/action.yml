@@ -20,7 +20,6 @@ runs:
   steps:
     - uses: DeterminateSystems/nix-installer-action@786fff0690178f1234e4e1fe9b536e94f5433196 # v20
       with:
-        diagnostic-endpoint: ''
         determinate: false
 
         backtrace: ${{ inputs.dogfood == 'true' && 'full' || '' }}
@@ -34,6 +33,5 @@ runs:
     - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
       if: ${{ inputs.use-cache == 'true' }}
       with:
-        diagnostic-endpoint: ''
         use-flakehub: false
         use-gha-cache: true

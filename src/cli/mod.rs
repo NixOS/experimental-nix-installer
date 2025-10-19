@@ -50,32 +50,6 @@ pub struct NixInstallerCli {
     )]
     pub ssl_cert_file: Option<PathBuf>,
 
-    #[cfg(feature = "diagnostics")]
-    /// Relate the install diagnostic to a specific value
-    #[cfg_attr(
-        feature = "cli",
-        clap(
-            long,
-            default_value = None,
-            env = "NIX_INSTALLER_DIAGNOSTIC_ATTRIBUTION",
-            global = true
-        )
-    )]
-    pub diagnostic_attribution: Option<String>,
-
-    #[cfg(feature = "diagnostics")]
-    /// The URL or file path for an anonymous installation diagnostic to be sent
-    ///
-    /// To disable diagnostic reporting, unset the default with `--diagnostic-endpoint ""`, or `NIX_INSTALLER_DIAGNOSTIC_ENDPOINT=""`
-    #[clap(
-        long,
-        env = "NIX_INSTALLER_DIAGNOSTIC_ENDPOINT",
-        global = true,
-        num_args = 0..=1, // Required to allow `--diagnostic-endpoint` or `NIX_INSTALLER_DIAGNOSTIC_ENDPOINT=""`
-        default_value = None
-    )]
-    pub diagnostic_endpoint: Option<String>,
-
     #[clap(flatten)]
     pub instrumentation: arg::Instrumentation,
 
@@ -224,13 +198,6 @@ pub fn ensure_root() -> eyre::Result<()> {
             if preserve {
                 env_list.push(format!("{key}={value}"));
             }
-        }
-
-        #[cfg(feature = "diagnostics")]
-        if is_ci::cached() {
-            // Normally `sudo` would erase those envs, so we detect and pass that along specifically to avoid having to pass around
-            // a bunch of environment variables
-            env_list.push("DETSYS_IDS_IN_CI=1".to_string());
         }
 
         if !env_list.is_empty() {

@@ -72,8 +72,6 @@ match plan.install(feedback::devnull::DevNull{}, None).await {
 pub mod action;
 #[cfg(feature = "cli")]
 pub mod cli;
-#[cfg(feature = "diagnostics")]
-pub mod diagnostics;
 mod error;
 pub mod feedback;
 mod os;

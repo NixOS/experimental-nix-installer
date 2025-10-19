@@ -411,8 +411,6 @@ These settings are available for all commands.
 | Flag(s)                    | Description                                                                                        | Default (if any)                     | Environment variable                   |
 | -------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------- |
 | `--determinate`            | Installs [Determinate]                                                                             | `NIX_INSTALLER_DETERMINATE`          |
-| `--diagnostic-attribution` | Relate the install diagnostic to a specific distinct user ID                                       |                                      | `NIX_INSTALLER_DIAGNOSTIC_ATTRIBUTION` |
-| `--diagnostic-endpoint`    | The URL or file path for an installation diagnostic to be sent                                     |                                      | `NIX_INSTALLER_DIAGNOSTIC_ENDPOINT`    |
 | `--explain`                | Provide an explanation of the changes the installation process will make to your system            | `false`                              | `NIX_INSTALLER_EXPLAIN`                |
 | `--extra-conf`             | Extra configuration lines for `/etc/nix.conf`                                                      |                                      | `NIX_INSTALLER_EXTRA_CONF`             |
 | `--force`                  | Whether the installer should forcibly recreate files it finds existing                             | `false`                              | `NIX_INSTALLER_FORCE`                  |
@@ -469,26 +467,6 @@ nix-installer uninstall /path/to/receipt.json
 ### Self-test (`nix-installer self-test`)
 
 `nix-installer self-test` only takes [general settings](#general-settings).
-
-## Diagnostics
-
-The goal of Determinate Nix Installer is to successfully and correctly install Nix.
-The `curl | sh` pipeline and the installer collects a little bit of anonymous diagnostic information to help us make that true.
-
-The anonymous diagnostics we collect to help us improve the installer includes:
-
-- The installer version
-- Which planner is used (`linux`, `macos`, `steam-deck`)
-- What action was taken (install, uninstall)
-- The result (`Success`, `Failure`, `Pending`, or `Cancelled`)
-- The customized planner setting names (_not_ the values)
-- Information about your host, like the OS and version, architecture, binary format, etc.
-- Whether you're in CI or not
-- A high level description of what the failure was, like if a specific command failed.
-
-To disable diagnostic reporting, set the diagnostics URL to an empty string by passing `--diagnostic-endpoint=""` or setting `NIX_INSTALLER_DIAGNOSTIC_ENDPOINT=""`.
-
-You can read the full privacy policy for [Determinate Systems][detsys], the creators of Determinate Nix Installer, [here][privacy].
 
 [actions]: https://github.com/features/actions
 [cache]: https://docs.determinate.systems/flakehub/cache

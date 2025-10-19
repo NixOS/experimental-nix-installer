@@ -165,48 +165,6 @@ pub struct CommonSettings {
     )]
     pub skip_nix_conf: bool,
 
-    #[cfg(feature = "diagnostics")]
-    /// Relate the install diagnostic to a specific value
-    #[cfg_attr(
-        feature = "cli",
-        clap(
-            long,
-            default_value = None,
-            env = "NIX_INSTALLER_DIAGNOSTIC_ATTRIBUTION",
-            global = true
-        )
-    )]
-    pub diagnostic_attribution: Option<String>,
-
-    #[cfg(feature = "diagnostics")]
-    /// The URL or file path for an installation diagnostic to be sent
-    ///
-    /// Sample of the data sent:
-    ///
-    /// {
-    ///     "attribution": null,
-    ///     "version": "0.4.0",
-    ///     "planner": "linux",
-    ///     "configured_settings": [ "modify_profile" ],
-    ///     "os_name": "Ubuntu",
-    ///     "os_version": "22.04.1 LTS (Jammy Jellyfish)",
-    ///     "triple": "x86_64-unknown-linux-gnu",
-    ///     "is_ci": false,
-    ///     "action": "Install",
-    ///     "status": "Success"
-    /// }
-    ///
-    /// To disable diagnostic reporting, unset the default with `--diagnostic-endpoint ""`, or `NIX_INSTALLER_DIAGNOSTIC_ENDPOINT=""`
-    #[clap(
-        long,
-        env = "NIX_INSTALLER_DIAGNOSTIC_ENDPOINT",
-        global = true,
-        value_parser = crate::diagnostics::diagnostic_endpoint_validator,
-        num_args = 0..=1, // Required to allow `--diagnostic-endpoint` or `NIX_INSTALLER_DIAGNOSTIC_ENDPOINT=""`
-        default_value = ""
-    )]
-    pub diagnostic_endpoint: Option<String>,
-
     /// Whether to setup system channels
     #[cfg_attr(
         feature = "cli",
@@ -283,10 +241,6 @@ impl CommonSettings {
             force: false,
             skip_nix_conf: false,
             ssl_cert_file: Default::default(),
-            #[cfg(feature = "diagnostics")]
-            diagnostic_attribution: None,
-            #[cfg(feature = "diagnostics")]
-            diagnostic_endpoint: Some("".into()),
             add_channel: false,
         })
     }
@@ -306,10 +260,6 @@ impl CommonSettings {
             force,
             skip_nix_conf,
             ssl_cert_file,
-            #[cfg(feature = "diagnostics")]
-                diagnostic_attribution: _,
-            #[cfg(feature = "diagnostics")]
-                diagnostic_endpoint: _,
             add_channel,
         } = self;
         let mut map = HashMap::default();
@@ -627,14 +577,6 @@ impl clap::builder::TypedValueParser for UrlOrPathOrString {
                 Err(err)
             },
         }
-    }
-}
-
-#[cfg(feature = "diagnostics")]
-impl crate::diagnostics::ErrorDiagnostic for InstallSettingsError {
-    fn diagnostic(&self) -> String {
-        let static_str: &'static str = (self).into();
-        static_str.to_string()
     }
 }
 

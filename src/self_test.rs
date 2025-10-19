@@ -26,27 +26,6 @@ pub enum SelfTestError {
     SystemTime(#[from] std::time::SystemTimeError),
 }
 
-#[cfg(feature = "diagnostics")]
-impl crate::diagnostics::ErrorDiagnostic for SelfTestError {
-    fn diagnostic(&self) -> String {
-        let static_str: &'static str = (self).into();
-        let context = match self {
-            Self::ShellFailed { shell, .. } => vec![shell.to_string()],
-            Self::Command { shell, .. } => vec![shell.to_string()],
-            Self::SystemTime(_) => vec![],
-        };
-        format!(
-            "{}({})",
-            static_str,
-            context
-                .iter()
-                .map(|v| format!("\"{v}\""))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub enum Shell {
     Sh,
