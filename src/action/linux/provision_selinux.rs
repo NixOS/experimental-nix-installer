@@ -10,8 +10,6 @@ use crate::action::{Action, ActionDescription, StatefulAction};
 use crate::util::OnMissing;
 
 pub const SELINUX_POLICY_PP_CONTENT: &[u8] = include_bytes!("selinux/nix.pp");
-pub const DETERMINATE_SELINUX_POLICY_PP_CONTENT: &[u8] =
-    include_bytes!("selinux/determinate-nix.pp");
 
 /**
 Provision the selinux/nix.pp for SELinux compatibility
