@@ -62,12 +62,3 @@ eyre = { version = "0.6.8", default-features = false, features = [ "track-caller
 strip = true  # Automatically strip symbols from the binary.
 opt-level = "z"  # Optimize for size.
 lto = true
-
-[package.metadata.docs.rs]
-# NOTE(cole-h): We embed the Nix closure by reading from this environment variable, but this is not
-# available in docs.rs's build. It doesn't influence docs, so it's fine to set it to a bogus (but
-# existing-file) value.
-cargo-args = [
-    "--config", "env.DETERMINATE_NIX_TARBALL_PATH=\"../Cargo.toml\"",
-    "--config", "env.DETERMINATE_NIXD_BINARY_PATH=\"../Cargo.toml\""
-]
