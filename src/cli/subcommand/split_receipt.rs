@@ -248,37 +248,6 @@ async fn two_phased_can_parse_receipt_perfectly(
                     let _ = std::mem::replace(action, action_unjson.boxed());
                 }
             },
-            action_tag
-                if action_tag
-                    == crate::action::macos::CreateDeterminateNixVolume::action_tag().0 =>
-            {
-                let action_unjson = roundtrip_to_extract_type::<
-                    crate::action::macos::CreateDeterminateNixVolume,
-                >(action)?;
-
-                tracing::debug!("Marking create_volume, encrypt_volume, unmount_volume as skipped so we don't undo it until phase 2");
-
-                {
-                    let action_unjson = action_unjson.clone();
-                    phase2_plan
-                        .actions
-                        .push(action_unjson.action.create_volume.boxed());
-                    phase2_plan
-                        .actions
-                        .push(action_unjson.action.unmount_volume.boxed());
-                    phase2_plan
-                        .actions
-                        .push(action_unjson.action.encrypt_volume.boxed());
-                }
-
-                {
-                    let mut action_unjson = action_unjson;
-                    action_unjson.action.create_volume.state = ActionState::Skipped;
-                    action_unjson.action.encrypt_volume.state = ActionState::Skipped;
-                    action_unjson.action.unmount_volume.state = ActionState::Skipped;
-                    let _ = std::mem::replace(action, action_unjson.boxed());
-                }
-            },
             _ => {},
         }
     }
@@ -425,31 +394,6 @@ async fn two_phased_cannot_parse_receipt_perfectly(
                     if !action_obj["encrypt_volume"].is_null() {
                         action_obj["encrypt_volume"]["state"] = skipped_json_value.clone();
                     }
-                    action_obj["unmount_volume"]["state"] = skipped_json_value.clone();
-                }
-            },
-            // CreateDeterminateNixVolume; macOS-only
-            "create_determinate_nix_volume" => {
-                tracing::debug!("Marking create_volume, encrypt_volume, unmount_volume as skipped so we don't undo it until phase 2");
-
-                {
-                    phase2_plan
-                        .actions
-                        .push(action_obj["create_volume"].clone());
-                    phase2_plan
-                        .actions
-                        .push(action_obj["encrypt_volume"].clone());
-                    // NOTE(cole-h): this action will ~always be at the "Progress" phase because we
-                    // expect it to fail, and once it fails, it exits early and doesn't set the
-                    // completed status
-                    phase2_plan
-                        .actions
-                        .push(action_obj["unmount_volume"].clone());
-                }
-
-                {
-                    action_obj["create_volume"]["state"] = skipped_json_value.clone();
-                    action_obj["encrypt_volume"]["state"] = skipped_json_value.clone();
                     action_obj["unmount_volume"]["state"] = skipped_json_value.clone();
                 }
             },

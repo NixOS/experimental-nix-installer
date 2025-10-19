@@ -4,7 +4,7 @@
   inputs = {
     # can track upstream versioning with
     # git show $most_recently_merged_commit:flake.lock | jq '.nodes[.nodes.root.inputs.nixpkgs].locked.rev'
-    nixpkgs.url = "github:NixOS/nixpkgs/807e9154dcb16384b1b765ebe9cd2bba2ac287fd";
+    nixpkgs.url = "github:NixOS/nixpkgs/d98ce345cdab58477ca61855540999c86577d19d";
 
     crane.url = "github:ipetkov/crane/v0.20.0";
 
@@ -12,19 +12,6 @@
       url = "github:NixOS/nix/2.32.0";
       # Omitting `inputs.nixpkgs.follows = "nixpkgs";` on purpose
     };
-    # We don't use this, so let's save download/update time
-    # determinate = {
-    #   url = "https://flakehub.com/f/DeterminateSystems/determinate/0.1.tar.gz";
-
-    #   # We set the overrides below so the flake.lock has many fewer nodes.
-    #   #
-    #   # The `determinate` input is used to access the builds of `determinate-nixd`.
-    #   # Below, we access the `packages` outputs, which download static builds of `determinate-nixd` and makes them executable.
-    #   # The way we consume the determinate flake means the `nix` and `nixpkgs` inputs are not meaningfully used.
-    #   # This means `follows` won't cause surprisingly extensive rebuilds, just trivial `chmod +x` rebuilds.
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    #   inputs.nix.follows = "nix";
-    # };
 
     flake-compat.url = "github:edolstra/flake-compat/v1.0.0";
   };
@@ -34,12 +21,11 @@
     , nixpkgs
     , crane
     , nix
-      # , determinate
     , ...
     } @ inputs:
     let
+      nix_tarball_url_prefix = "https://releases.nixos.org/nix/nix-2.32.0/nix-2.32.0-";
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      systemsSupportedByDeterminateNixd = [ ]; # avoid refs to detsys nixd for now
 
       forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: (forSystem system f));
 
@@ -48,12 +34,6 @@
         pkgs = import nixpkgs { inherit system; overlays = [ self.overlays.default ]; };
         lib = pkgs.lib;
       };
-
-      nixTarballs = forAllSystems ({ system, ... }:
-        inputs.nix.tarballs_direct.${system}
-          or "${inputs.nix.checks."${system}".binaryTarball}/nix-${inputs.nix.packages."${system}".default.version}-${system}.tar.xz");
-
-      optionalPathToDeterminateNixd = system: if builtins.elem system systemsSupportedByDeterminateNixd then "${inputs.determinate.packages.${system}.default}/bin/determinate-nixd" else null;
 
       installerPackage = { pkgs, stdenv, buildPackages }:
         let
@@ -83,8 +63,7 @@
         craneLib.buildPackage (sharedAttrs // {
           cargoArtifacts = craneLib.buildDepsOnly sharedAttrs;
           RUSTFLAGS = "--cfg tokio_unstable";
-          NIX_INSTALLER_TARBALL_PATH = nixTarballs.${stdenv.system};
-          DETERMINATE_NIXD_BINARY_PATH = optionalPathToDeterminateNixd stdenv.system;
+          NIX_TARBALL_URL = "${nix_tarball_url_prefix}${stdenv.hostPlatform.system}.tar.xz";
           postInstall = ''
             cp nix-installer.sh $out/bin/nix-installer.sh
           '';
@@ -129,8 +108,6 @@
             name = "nix-install-shell";
 
             RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}/library";
-            NIX_INSTALLER_TARBALL_PATH = nixTarballs.${system};
-            DETERMINATE_NIXD_BINARY_PATH = optionalPathToDeterminateNixd system;
 
             nativeBuildInputs = with pkgs; [ ];
             buildInputs = with pkgs; [

@@ -111,9 +111,7 @@ impl EncryptApfsVolume {
                 if volume.name.as_ref() == Some(&name) && volume.file_vault.unwrap_or(false) {
                     return Ok(StatefulAction::completed(Self {
                         distribution,
-                        disk,
-                        name,
-                    }));
+                        disk, name }));
                 }
             }
         }
@@ -225,10 +223,6 @@ impl Action for EncryptApfsVolume {
             "-T",
             "/usr/bin/security",
         ]);
-
-        if self.distribution == Distribution::DeterminateNix {
-            cmd.args(["-T", "/usr/local/bin/determinate-nixd"]);
-        }
 
         cmd.arg("/Library/Keychains/System.keychain");
 

@@ -9,7 +9,6 @@ use crate::action::base::{CreateDirectory, CreateOrMergeNixConfig};
 use crate::action::{
     Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction,
 };
-use crate::distribution::Distribution;
 use crate::parse_ssl_cert;
 use crate::settings::UrlOrPathOrString;
 use std::path::PathBuf;
@@ -47,29 +46,13 @@ impl PlaceNixConfiguration {
         ssl_cert_file: Option<PathBuf>,
         extra_conf: Vec<UrlOrPathOrString>,
         force: bool,
-        distribution: Distribution,
     ) -> Result<StatefulAction<Self>, ActionError> {
         let extra_conf = Self::parse_extra_conf(proxy, ssl_cert_file.as_ref(), extra_conf).await?;
 
-        let is_macos = matches!(
-            target_lexicon::OperatingSystem::host(),
-            target_lexicon::OperatingSystem::MacOSX { .. }
-                | target_lexicon::OperatingSystem::Darwin
-        );
-        let configured_ssl_cert_file = if distribution == Distribution::DeterminateNix && is_macos {
-            // On macOS, determinate-nixd will handle configuring the ssl-cert-file option for Nix
-            None
-        } else {
-            ssl_cert_file
-        };
+        let configured_ssl_cert_file = ssl_cert_file;
 
-        let standard_nix_config = if distribution != Distribution::DeterminateNix {
-            let maybe_trusted_users = extra_conf.settings().get(TRUSTED_USERS_CONF_NAME);
-
-            Some(Self::setup_standard_config(maybe_trusted_users).await?)
-        } else {
-            None
-        };
+        let maybe_trusted_users = extra_conf.settings().get(TRUSTED_USERS_CONF_NAME);
+        let standard_nix_config = Some(Self::setup_standard_config(maybe_trusted_users).await?);
 
         let custom_nix_config = Self::setup_extra_config(
             extra_conf,
@@ -330,22 +313,6 @@ impl Action for PlaceNixConfiguration {
             .map_err(Self::error)?;
         if let Some(ref mut standard_config) = self.create_or_merge_standard_nix_config {
             standard_config.try_execute().await.map_err(Self::error)?;
-        } else {
-            let mut command = tokio::process::Command::new("/usr/local/bin/determinate-nixd");
-            command.args(["init", "--stop-after", "nix-configuration"]);
-            command.stderr(std::process::Stdio::piped());
-            command.stdout(std::process::Stdio::piped());
-            tracing::trace!(command = ?command.as_std(), "Initializing nix.conf");
-            let output = command
-                .output()
-                .await
-                .map_err(|e| ActionErrorKind::command(&command, e))
-                .map_err(Self::error)?;
-            if !output.status.success() {
-                return Err(Self::error(ActionErrorKind::command_output(
-                    &command, output,
-                )));
-            }
         }
 
         self.create_or_merge_custom_nix_config

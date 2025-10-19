@@ -4,8 +4,6 @@
 pub(crate) mod bootstrap_launchctl_service;
 pub(crate) mod configure_remote_building;
 pub(crate) mod create_apfs_volume;
-pub(crate) mod create_determinate_nix_volume;
-pub(crate) mod create_determinate_volume_service;
 pub(crate) mod create_fstab_entry;
 pub(crate) mod create_nix_hook_service;
 pub(crate) mod create_nix_volume;
@@ -24,8 +22,6 @@ use std::{io::ErrorKind, path::Path};
 pub use bootstrap_launchctl_service::BootstrapLaunchctlService;
 pub use configure_remote_building::ConfigureRemoteBuilding;
 pub use create_apfs_volume::CreateApfsVolume;
-pub use create_determinate_nix_volume::CreateDeterminateNixVolume;
-pub use create_determinate_volume_service::CreateDeterminateVolumeService;
 pub use create_nix_hook_service::CreateNixHookService;
 pub use create_nix_volume::{CreateNixVolume, NIX_VOLUME_MOUNTD_DEST};
 pub use create_synthetic_objects::CreateSyntheticObjects;
@@ -264,8 +260,7 @@ pub(crate) async fn retry_bootout(domain: &str, service_name: &str) -> Result<()
 /// leaving only these slightly cryptic errors:
 ///
 /// ```text
-/// 2025-04-12 14:22:58.165233 (system/systems.determinate.nix-daemon - determinate-nixd.socket) <Error>: Failed to unlinkat() old socket path: path=/var/run/determinate-nixd.socket, error=Invalid argument (22)
-/// 2025-04-12 14:22:58.165279 (system/systems.determinate.nix-daemon - nix-daemon.socket) <Error>: Failed to unlinkat() old socket path: path=/var/run/nix-daemon.socket, error=Invalid argument (22)
+/// 2025-04-12 14:22:58.165279 (system/org.nixos.nix-daemon - nix-daemon.socket) <Error>: Failed to unlinkat() old socket path: path=/var/run/nix-daemon.socket, error=Invalid argument (22)
 /// ```
 #[tracing::instrument]
 pub(crate) async fn remove_socket_path(path: &Path) {

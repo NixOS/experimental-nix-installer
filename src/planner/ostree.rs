@@ -1,17 +1,13 @@
 use crate::{
     action::{
         base::{CreateDirectory, CreateFile, RemoveDirectory},
-        common::{
-            ConfigureNix, ConfigureUpstreamInitService, CreateUsersAndGroups,
-            ProvisionDeterminateNixd, ProvisionNix,
-        },
+        common::{ConfigureNix, ConfigureUpstreamInitService, CreateUsersAndGroups, ProvisionNix},
         linux::{
-            provision_selinux::{DETERMINATE_SELINUX_POLICY_PP_CONTENT, SELINUX_POLICY_PP_CONTENT},
-            ProvisionSelinux, StartSystemdUnit, SystemctlDaemonReload,
+            provision_selinux::SELINUX_POLICY_PP_CONTENT, ProvisionSelinux, StartSystemdUnit,
+            SystemctlDaemonReload,
         },
         StatefulAction,
     },
-    distribution::Distribution,
     error::HasExpectedErrors,
     planner::{Planner, PlannerError},
     settings::{CommonSettings, InitSystem, InstallSettingsError},
@@ -177,15 +173,6 @@ impl Planner for Ostree {
                 .boxed(),
         );
 
-        if self.settings.distribution() == Distribution::DeterminateNix {
-            plan.push(
-                ProvisionDeterminateNixd::plan()
-                    .await
-                    .map_err(PlannerError::Action)?
-                    .boxed(),
-            );
-        }
-
         plan.push(
             ProvisionNix::plan(&self.settings.clone())
                 .await
@@ -209,11 +196,7 @@ impl Planner for Ostree {
             plan.push(
                 ProvisionSelinux::plan(
                     "/etc/nix-installer/selinux/packages/nix.pp".into(),
-                    if self.settings.distribution() == Distribution::DeterminateNix {
-                        DETERMINATE_SELINUX_POLICY_PP_CONTENT
-                    } else {
-                        SELINUX_POLICY_PP_CONTENT
-                    },
+                    SELINUX_POLICY_PP_CONTENT,
                 )
                 .await
                 .map_err(PlannerError::Action)?

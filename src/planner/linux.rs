@@ -7,17 +7,10 @@ use super::ShellProfileLocations;
 use crate::{
     action::{
         base::{CreateDirectory, RemoveDirectory},
-        common::{
-            ConfigureDeterminateNixdInitService, ConfigureNix, ConfigureUpstreamInitService,
-            CreateUsersAndGroups, ProvisionDeterminateNixd, ProvisionNix,
-        },
-        linux::{
-            provision_selinux::{DETERMINATE_SELINUX_POLICY_PP_CONTENT, SELINUX_POLICY_PP_CONTENT},
-            ProvisionSelinux,
-        },
+        common::{ConfigureNix, ConfigureUpstreamInitService, CreateUsersAndGroups, ProvisionNix},
+        linux::{provision_selinux::SELINUX_POLICY_PP_CONTENT, ProvisionSelinux},
         StatefulAction,
     },
-    distribution::Distribution,
     error::HasExpectedErrors,
     planner::{Planner, PlannerError},
     settings::{CommonSettings, InitSettings, InitSystem, InstallSettingsError},
@@ -58,15 +51,6 @@ impl Planner for Linux {
                 .boxed(),
         );
 
-        if self.settings.distribution() == Distribution::DeterminateNix {
-            plan.push(
-                ProvisionDeterminateNixd::plan()
-                    .await
-                    .map_err(PlannerError::Action)?
-                    .boxed(),
-            );
-        }
-
         plan.push(
             ProvisionNix::plan(&self.settings.clone())
                 .await
@@ -88,16 +72,10 @@ impl Planner for Linux {
 
         if has_selinux {
             plan.push(
-                ProvisionSelinux::plan(
-                    FHS_SELINUX_POLICY_PATH.into(),
-                    match self.settings.distribution() {
-                        Distribution::DeterminateNix => DETERMINATE_SELINUX_POLICY_PP_CONTENT,
-                        Distribution::Nix => SELINUX_POLICY_PP_CONTENT,
-                    },
-                )
-                .await
-                .map_err(PlannerError::Action)?
-                .boxed(),
+                ProvisionSelinux::plan(FHS_SELINUX_POLICY_PATH.into(), SELINUX_POLICY_PP_CONTENT)
+                    .await
+                    .map_err(PlannerError::Action)?
+                    .boxed(),
             );
         }
 
@@ -108,28 +86,12 @@ impl Planner for Linux {
                 .boxed(),
         );
 
-        match self.settings.distribution() {
-            Distribution::DeterminateNix => {
-                // effectively disabled by skipping the cli option in settings.rs
-                plan.push(
-                    ConfigureDeterminateNixdInitService::plan(
-                        self.init.init,
-                        self.init.start_daemon,
-                    )
-                    .await
-                    .map_err(PlannerError::Action)?
-                    .boxed(),
-                );
-            },
-            Distribution::Nix => {
-                plan.push(
-                    ConfigureUpstreamInitService::plan(self.init.init, self.init.start_daemon)
-                        .await
-                        .map_err(PlannerError::Action)?
-                        .boxed(),
-                );
-            },
-        }
+        plan.push(
+            ConfigureUpstreamInitService::plan(self.init.init, self.init.start_daemon)
+                .await
+                .map_err(PlannerError::Action)?
+                .boxed(),
+        );
         plan.push(
             RemoveDirectory::plan(crate::settings::SCRATCH_DIR)
                 .await

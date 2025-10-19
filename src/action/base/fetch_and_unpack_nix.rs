@@ -73,18 +73,8 @@ impl Action for FetchAndUnpackNix {
         ActionTag("fetch_and_unpack_nix")
     }
     fn tracing_synopsis(&self) -> String {
-        match self.distribution.tarball_location_or(&self.url_or_path) {
-            TarballLocation::UrlOrPath(uop) => {
-                format!("Fetch `{}` to `{}`", uop, self.dest.display())
-            },
-            TarballLocation::InMemory(from, _) => {
-                format!(
-                    "Extract the bundled Nix (originally from {}) to `{}`",
-                    from,
-                    self.dest.display()
-                )
-            },
-        }
+        let TarballLocation::UrlOrPath(uop) = self.distribution.tarball_location_or(&self.url_or_path);
+        format!("Fetch `{}` to `{}`", uop, self.dest.display())
     }
 
     fn tracing_span(&self) -> Span {
@@ -114,9 +104,9 @@ impl Action for FetchAndUnpackNix {
 
     #[tracing::instrument(level = "debug", skip_all)]
     async fn execute(&mut self) -> Result<(), ActionError> {
-        let bytes = match self.distribution.tarball_location_or(&self.url_or_path) {
-            TarballLocation::InMemory(_, bytes) => Bytes::from(bytes),
-            TarballLocation::UrlOrPath(UrlOrPath::Url(url)) => {
+        let TarballLocation::UrlOrPath(url_or_path) = self.distribution.tarball_location_or(&self.url_or_path);
+        let bytes = match url_or_path {
+            UrlOrPath::Url(url) => {
                 let bytes = match url.scheme() {
                     "https" | "http" => {
                         let mut buildable_client = reqwest::Client::builder();
@@ -162,7 +152,7 @@ impl Action for FetchAndUnpackNix {
                 };
                 bytes
             },
-            TarballLocation::UrlOrPath(UrlOrPath::Path(path)) => {
+            UrlOrPath::Path(path) => {
                 let buf = tokio::fs::read(&path)
                     .await
                     .map_err(|e| ActionErrorKind::Read(path, e))

@@ -103,17 +103,13 @@ use tokio::process::Command;
 use crate::{
     action::{
         base::{CreateDirectory, CreateFile, RemoveDirectory},
-        common::{
-            ConfigureNix, ConfigureUpstreamInitService, CreateUsersAndGroups,
-            ProvisionDeterminateNixd, ProvisionNix,
-        },
+        common::{ConfigureNix, ConfigureUpstreamInitService, CreateUsersAndGroups, ProvisionNix},
         linux::{
             EnsureSteamosNixDirectory, RevertCleanSteamosNixOffload, StartSystemdUnit,
             SystemctlDaemonReload,
         },
         Action, StatefulAction,
     },
-    distribution::Distribution,
     planner::{Planner, PlannerError},
     settings::{CommonSettings, InitSystem, InstallSettingsError},
     BuiltinPlanner,
@@ -342,15 +338,6 @@ impl Planner for SteamDeck {
                     .map_err(PlannerError::Action)?
                     .boxed(),
             )
-        }
-
-        if self.settings.distribution() == Distribution::DeterminateNix {
-            actions.push(
-                ProvisionDeterminateNixd::plan()
-                    .await
-                    .map_err(PlannerError::Action)?
-                    .boxed(),
-            );
         }
 
         actions.append(&mut vec![
