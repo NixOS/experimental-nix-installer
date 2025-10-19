@@ -127,23 +127,13 @@ Consult our [troubleshooting guide](./docs/troubleshooting.md) to see if your pr
 
 ### Upgrading Nix
 
-If you've installed [Determinate Nix][det-nix], you can upgrade it using [Determinate Nixd][dnixd]:
-
-```shell
-sudo determinate-nixd upgrade
-```
-
-> [!NOTE]
-> Not sure if you're using Determinate Nix?
-> Run `nix --version` and if you see a version like `nix (Determinate Nix 3.4.1) 2.28.2` then you're running Determinate Nix.
-
-If you've installed [upstream Nix][upstream-nix], you can upgrade it by running:
+You can upgrade Nix by running:
 
 ```shell
 sudo -i nix upgrade-nix
 ```
 
-Alternatively, you can [uninstall](#uninstalling) and [reinstall](#install-nix) with a different version of Determinate Nix Installer.
+Alternatively, you can [uninstall](#uninstalling) and [reinstall](#install-nix) with a different version of the installer.
 
 ### Uninstalling
 
@@ -475,7 +465,6 @@ nix-installer uninstall /path/to/receipt.json
 [determinate-flake]: https://github.com/DeterminateSystems/determinate
 [determinate-nix-action]: https://github.com/DeterminateSystems/determinate-nix-action
 [detsys]: https://determinate.systems
-[dnixd]: https://docs.determinate.systems/determinate-nix#determinate-nixd
 [docker]: https://docker.com
 [enabling-systemd]: https://devblogs.microsoft.com/commandline/systemd-support-is-now-available-in-wsl/#how-can-you-get-systemd-on-your-machine
 [flakehub]: https://flakehub.com
