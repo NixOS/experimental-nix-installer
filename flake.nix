@@ -108,8 +108,8 @@
             name = "nix-install-shell";
 
             RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}/library";
+            NIX_TARBALL_URL = "${nix_tarball_url_prefix}${pkgs.stdenv.hostPlatform.system}.tar.xz";
 
-            nativeBuildInputs = with pkgs; [ ];
             buildInputs = with pkgs; [
               rustc
               cargo
