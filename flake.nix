@@ -20,9 +20,8 @@
     { self
     , nixpkgs
     , crane
-    , nix
     , ...
-    } @ inputs:
+    }:
     let
       nix_tarball_url_prefix = "https://releases.nixos.org/nix/nix-2.32.0/nix-2.32.0-";
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
@@ -71,7 +70,7 @@
     in
     {
       overlays.default = final: prev:
-        rec {
+        {
           # NOTE(cole-h): fixes build -- nixpkgs updated libsepol to 3.7 but didn't update
           # checkpolicy to 3.7, checkpolicy links against libsepol, and libsepol 3.7 changed
           # something in the API so checkpolicy 3.6 failed to build against libsepol 3.7
@@ -99,7 +98,7 @@
         };
 
 
-      devShells = forAllSystems ({ system, pkgs, ... }:
+      devShells = forAllSystems ({ pkgs, ... }:
         let
           check = import ./nix/check.nix { inherit pkgs; };
         in
@@ -143,7 +142,7 @@
           };
         });
 
-      checks = forAllSystems ({ system, pkgs, ... }:
+      checks = forAllSystems ({ pkgs, ... }:
         let
           check = import ./nix/check.nix { inherit pkgs; };
         in
