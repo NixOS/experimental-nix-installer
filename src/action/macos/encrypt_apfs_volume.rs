@@ -102,8 +102,7 @@ impl EncryptApfsVolume {
         for container in parsed.containers {
             for volume in container.volumes {
                 if volume.name.as_ref() == Some(&name) && volume.file_vault.unwrap_or(false) {
-                    return Ok(StatefulAction::completed(Self {
-                        disk, name }));
+                    return Ok(StatefulAction::completed(Self { disk, name }));
                 }
             }
         }

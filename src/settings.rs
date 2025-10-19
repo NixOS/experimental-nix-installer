@@ -302,7 +302,6 @@ impl CommonSettings {
 
         Ok(map)
     }
-
 }
 
 async fn linux_detect_systemd_started() -> bool {
