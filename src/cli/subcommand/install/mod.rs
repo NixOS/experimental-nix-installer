@@ -75,10 +75,7 @@ pub struct Install {
 #[async_trait::async_trait]
 impl CommandExecute for Install {
     #[tracing::instrument(level = "trace", skip_all)]
-    async fn execute<T>(self, mut feedback: T) -> eyre::Result<ExitCode>
-    where
-        T: crate::feedback::Feedback,
-    {
+    async fn execute(self) -> eyre::Result<ExitCode> {
         let Self {
             no_confirm,
             plan,
@@ -156,13 +153,10 @@ impl CommandExecute for Install {
                 return Ok(ExitCode::SUCCESS);
             }
 
-            feedback.set_planner(&planner).await?;
-
             let res = planner.plan().await;
             match res {
                 Ok(plan) => plan,
                 Err(err) => {
-                    feedback.planning_failed(&err).await;
                     if let Some(expected) = err.expected() {
                         eprintln!("{}", expected.red());
                         return Ok(ExitCode::FAILURE);
@@ -171,8 +165,6 @@ impl CommandExecute for Install {
                 },
             }
         };
-
-        feedback.planning_succeeded().await;
 
         if let Err(err) = install_plan.pre_install_check().await {
             if let Some(expected) = err.expected() {
@@ -209,7 +201,7 @@ impl CommandExecute for Install {
 
         let (tx, rx1) = signal_channel().await?;
 
-        match install_plan.install(feedback.clone(), rx1).await {
+        match install_plan.install(rx1).await {
             Err(err) => {
                 // Attempt to copy self to the store if possible, but since the install failed, this might not work, that's ok.
                 copy_self_to_nix_dir().await.ok();
@@ -255,7 +247,7 @@ impl CommandExecute for Install {
                         }
                     }
                     let rx2 = tx.subscribe();
-                    let res = install_plan.uninstall(feedback, rx2).await;
+                    let res = install_plan.uninstall(rx2).await;
 
                     match res {
                         Err(NixInstallerError::ActionRevert(errs)) => {

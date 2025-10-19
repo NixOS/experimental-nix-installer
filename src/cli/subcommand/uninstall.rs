@@ -45,10 +45,7 @@ pub struct Uninstall {
 #[async_trait::async_trait]
 impl CommandExecute for Uninstall {
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn execute<T>(self, feedback: T) -> eyre::Result<ExitCode>
-    where
-        T: crate::feedback::Feedback,
-    {
+    async fn execute(self) -> eyre::Result<ExitCode> {
         let Self {
             no_confirm,
             receipt,
@@ -191,7 +188,7 @@ impl CommandExecute for Uninstall {
 
         let (_tx, rx) = signal_channel().await?;
 
-        let res = plan.uninstall(feedback, rx).await;
+        let res = plan.uninstall(rx).await;
         match res {
             Err(err @ NixInstallerError::ActionRevert(_)) => {
                 tracing::error!("Uninstallation complete, some errors encountered");

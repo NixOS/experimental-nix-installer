@@ -18,17 +18,17 @@ it, uninstalling if anything goes wrong:
 
 ```rust,no_run
 use std::error::Error;
-use nix_installer::{feedback, InstallPlan};
+use nix_installer::InstallPlan;
 # async fn default_install() -> color_eyre::Result<()> {
 let mut plan = InstallPlan::default().await?;
-match plan.install(feedback::devnull::DevNull {}, None).await {
+match plan.install(None).await {
     Ok(()) => tracing::info!("Done"),
     Err(e) => {
         match e.source() {
             Some(source) => tracing::error!("{e}: {}", source),
             None => tracing::error!("{e}"),
         };
-        plan.uninstall(feedback::devnull::DevNull {}, None).await?;
+        plan.uninstall(None).await?;
     },
 };
 #
@@ -38,7 +38,7 @@ match plan.install(feedback::devnull::DevNull {}, None).await {
 Sometimes choosing a specific planner is desired:
 ```rust,no_run
 use std::error::Error;
-use nix_installer::{feedback, InstallPlan, planner::Planner};
+use nix_installer::{InstallPlan, planner::Planner};
 
 # async fn chosen_planner_install() -> color_eyre::Result<()> {
 #[cfg(target_os = "linux")]
@@ -52,14 +52,14 @@ let planner = nix_installer::planner::macos::Macos::default().await?;
 // Customize any settings...
 
 let mut plan = InstallPlan::plan(planner).await?;
-match plan.install(feedback::devnull::DevNull{}, None).await {
+match plan.install(None).await {
     Ok(()) => tracing::info!("Done"),
     Err(e) => {
         match e.source() {
             Some(source) => tracing::error!("{e}: {}", source),
             None => tracing::error!("{e}"),
         };
-        plan.uninstall(feedback::devnull::DevNull{}, None).await?;
+        plan.uninstall(None).await?;
     },
 };
 #
@@ -73,7 +73,6 @@ pub mod action;
 #[cfg(feature = "cli")]
 pub mod cli;
 mod error;
-pub mod feedback;
 mod os;
 mod plan;
 pub mod planner;

@@ -23,9 +23,7 @@ Try our macOS-native package instead, which can handle almost anything: https://
 
 #[async_trait::async_trait]
 pub trait CommandExecute {
-    async fn execute<T>(self, feedback: T) -> eyre::Result<ExitCode>
-    where
-        T: crate::feedback::Feedback;
+    async fn execute(self) -> eyre::Result<ExitCode>;
 }
 
 /**
@@ -60,23 +58,16 @@ pub struct NixInstallerCli {
 #[async_trait::async_trait]
 impl CommandExecute for NixInstallerCli {
     #[tracing::instrument(level = "trace", skip_all)]
-    async fn execute<T>(self, feedback: T) -> eyre::Result<ExitCode>
-    where
-        T: crate::feedback::Feedback,
-    {
-        let feedback_clone = feedback.clone();
-
+    async fn execute(self) -> eyre::Result<ExitCode> {
         let is_install_subcommand = matches!(self.subcommand, NixInstallerSubcommand::Install(_));
 
         let ret = match self.subcommand {
-            NixInstallerSubcommand::Plan(plan) => plan.execute(feedback_clone).await,
-            NixInstallerSubcommand::SelfTest(self_test) => self_test.execute(feedback_clone).await,
-            NixInstallerSubcommand::Install(install) => install.execute(feedback_clone).await,
-            NixInstallerSubcommand::Repair(repair) => repair.execute(feedback_clone).await,
-            NixInstallerSubcommand::Uninstall(revert) => revert.execute(feedback_clone).await,
-            NixInstallerSubcommand::SplitReceipt(split_receipt) => {
-                split_receipt.execute(feedback_clone).await
-            },
+            NixInstallerSubcommand::Plan(plan) => plan.execute().await,
+            NixInstallerSubcommand::SelfTest(self_test) => self_test.execute().await,
+            NixInstallerSubcommand::Install(install) => install.execute().await,
+            NixInstallerSubcommand::Repair(repair) => repair.execute().await,
+            NixInstallerSubcommand::Uninstall(revert) => revert.execute().await,
+            NixInstallerSubcommand::SplitReceipt(split_receipt) => split_receipt.execute().await,
         };
 
         let maybe_cancelled = ret.as_ref().err().and_then(|err| {
@@ -106,17 +97,12 @@ impl CommandExecute for NixInstallerCli {
             let is_error = ret.as_ref().is_err();
 
             if is_error || is_ok_but_failed {
-                let msg = feedback
-                    .get_feature_ptr_payload::<String>("dni-det-msg-fail-pkg-ptr")
-                    .await
-                    .unwrap_or(FAIL_PKG_SUGGEST.into());
-
                 // NOTE: If the error bubbled up, print it before we log the pkg suggestion
                 if let Err(ref err) = ret {
                     eprintln!("{err:?}\n");
                 }
 
-                tracing::warn!("{}\n", msg.trim());
+                tracing::warn!("{}\n", FAIL_PKG_SUGGEST.trim());
 
                 return Ok(ExitCode::FAILURE);
             }

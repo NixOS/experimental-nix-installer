@@ -51,10 +51,7 @@ pub struct SplitReceipt {
 #[async_trait::async_trait]
 impl CommandExecute for SplitReceipt {
     #[tracing::instrument(level = "debug", skip_all)]
-    async fn execute<T>(self, _feedback: T) -> eyre::Result<ExitCode>
-    where
-        T: crate::feedback::Feedback,
-    {
+    async fn execute(self) -> eyre::Result<ExitCode> {
         ensure_root()?;
 
         let timestamp_millis = SystemTime::now()

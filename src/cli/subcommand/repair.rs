@@ -118,10 +118,7 @@ impl Repair {
 #[async_trait::async_trait]
 impl CommandExecute for Repair {
     #[tracing::instrument(level = "trace", skip_all)]
-    async fn execute<T>(self, _feedback: T) -> eyre::Result<ExitCode>
-    where
-        T: crate::feedback::Feedback,
-    {
+    async fn execute(self) -> eyre::Result<ExitCode> {
         let command = self.command();
 
         ensure_root()?;

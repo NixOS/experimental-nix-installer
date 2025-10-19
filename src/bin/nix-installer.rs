@@ -2,7 +2,6 @@ use std::{io::IsTerminal, process::ExitCode};
 
 use clap::Parser;
 use nix_installer::cli::CommandExecute;
-use nix_installer::feedback::FeedbackWorker;
 
 #[tokio::main]
 async fn main() -> eyre::Result<ExitCode> {
@@ -24,11 +23,5 @@ async fn main() -> eyre::Result<ExitCode> {
 
     tracing::info!("nix-installer v{}", env!("CARGO_PKG_VERSION"));
 
-    let (feedback, feedback_worker) = nix_installer::feedback::devnull::dev_null();
-
-    let err = cli.execute(feedback).await;
-
-    feedback_worker.submit().await;
-
-    err
+    cli.execute().await
 }

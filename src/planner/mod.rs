@@ -13,7 +13,6 @@ A custom [`Planner`] can be created:
 ```rust,no_run
 use std::{error::Error, collections::HashMap};
 use nix_installer::{
-    feedback,
     InstallPlan,
     settings::{CommonSettings, InstallSettingsError},
     planner::{Planner, PlannerError},
@@ -85,14 +84,14 @@ impl Planner for MyPlanner {
 # async fn custom_planner_install() -> color_eyre::Result<()> {
 let planner = MyPlanner::default().await?;
 let mut plan = InstallPlan::plan(planner).await?;
-match plan.install(feedback::devnull::DevNull{}, None).await {
+match plan.install(None).await {
     Ok(()) => tracing::info!("Done"),
     Err(e) => {
         match e.source() {
             Some(source) => tracing::error!("{e}: {}", source),
             None => tracing::error!("{e}"),
         };
-        plan.uninstall(feedback::devnull::DevNull{}, None).await?;
+        plan.uninstall(None).await?;
     },
 };
 

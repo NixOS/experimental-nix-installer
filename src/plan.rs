@@ -145,14 +145,10 @@ impl InstallPlan {
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    pub async fn install<T>(
+    pub async fn install(
         &mut self,
-        mut feedback: T,
         cancel_channel: impl Into<Option<Receiver<()>>>,
-    ) -> Result<(), NixInstallerError>
-    where
-        T: crate::feedback::Feedback,
-    {
+    ) -> Result<(), NixInstallerError> {
         self.check_compatible()?;
         self.pre_install_check().await?;
 
@@ -171,8 +167,6 @@ impl InstallPlan {
                         tracing::error!("Error saving receipt: {:?}", err);
                     }
 
-                    feedback.install_cancelled().await;
-
                     return Err(NixInstallerError::Cancelled);
                 }
             }
@@ -185,8 +179,6 @@ impl InstallPlan {
 
                 let err = NixInstallerError::Action(err);
 
-                feedback.install_failed(&err).await;
-
                 return Err(err);
             }
         }
@@ -197,12 +189,8 @@ impl InstallPlan {
             .await
             .map_err(NixInstallerError::SelfTest)
         {
-            feedback.self_test_failed(&err).await;
-
             tracing::warn!("{err:?}")
         }
-
-        feedback.install_succeeded().await;
 
         Ok(())
     }
@@ -284,14 +272,10 @@ impl InstallPlan {
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
-    pub async fn uninstall<T>(
+    pub async fn uninstall(
         &mut self,
-        mut feedback: T,
         cancel_channel: impl Into<Option<Receiver<()>>>,
-    ) -> Result<(), NixInstallerError>
-    where
-        T: crate::feedback::Feedback,
-    {
+    ) -> Result<(), NixInstallerError> {
         self.check_compatible()?;
         self.pre_uninstall_check().await?;
 
@@ -311,8 +295,6 @@ impl InstallPlan {
                         tracing::error!("Error saving receipt: {:?}", err);
                     }
 
-                    feedback.uninstall_cancelled().await;
-
                     return Err(NixInstallerError::Cancelled);
                 }
             }
@@ -324,11 +306,9 @@ impl InstallPlan {
         }
 
         if errors.is_empty() {
-            feedback.uninstall_succeeded().await;
             Ok(())
         } else {
             let err = NixInstallerError::ActionRevert(errors);
-            feedback.uninstall_failed(&err).await;
             Err(err)
         }
     }
