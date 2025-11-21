@@ -34,7 +34,7 @@
         lib = pkgs.lib;
       };
 
-      installerPackage = { pkgs, stdenv, buildPackages }:
+      installerPackage = { pkgs, stdenv, buildPackages, extraRustFlags ? "" }:
         let
           craneLib = crane.mkLib pkgs;
           sharedAttrs = {
@@ -61,8 +61,10 @@
         in
         craneLib.buildPackage (sharedAttrs // {
           cargoArtifacts = craneLib.buildDepsOnly sharedAttrs;
-          RUSTFLAGS = "--cfg tokio_unstable";
-          NIX_TARBALL_URL = "${nix_tarball_url_prefix}${stdenv.hostPlatform.system}.tar.xz";
+          env = sharedAttrs.env // {
+            RUSTFLAGS = "--cfg tokio_unstable${if extraRustFlags != "" then " ${extraRustFlags}" else ""}";
+            NIX_TARBALL_URL = "${nix_tarball_url_prefix}${stdenv.hostPlatform.system}.tar.xz";
+          };
           postInstall = ''
             cp nix-installer.sh $out/bin/nix-installer.sh
           '';
@@ -101,6 +103,7 @@
               pkgs = muslPkgs;
               stdenv = muslPkgs.stdenv;
               buildPackages = final.pkgsBuildHost;
+              extraRustFlags = "-C target-feature=+crt-static";
             };
         };
 
