@@ -69,20 +69,6 @@ impl Planner for MyPlanner {
         Ok(settings)
     }
 
-    #[cfg(feature = "diagnostics")]
-    async fn diagnostic_data(&self) -> Result<nix_installer::diagnostics::DiagnosticData, PlannerError> {
-        Ok(nix_installer::diagnostics::DiagnosticData::new(
-            self.common.diagnostic_attribution.clone(),
-            self.common.diagnostic_endpoint.clone(),
-            self.typetag_name().into(),
-            self.configured_settings()
-                .await?
-                .into_keys()
-                .collect::<Vec<_>>(),
-            self.common.ssl_cert_file.clone(),
-        )?)
-    }
-
     async fn platform_check(&self) -> Result<(), PlannerError> {
         use target_lexicon::OperatingSystem;
         match target_lexicon::OperatingSystem::host() {
@@ -163,9 +149,6 @@ pub trait Planner: std::fmt::Debug + Send + Sync + dyn_clone::DynClone {
     async fn pre_install_check(&self) -> Result<(), PlannerError> {
         Ok(())
     }
-
-    #[cfg(feature = "diagnostics")]
-    async fn diagnostic_data(&self) -> Result<crate::diagnostics::DiagnosticData, PlannerError>;
 }
 
 dyn_clone::clone_trait_object!(Planner);
@@ -242,6 +225,24 @@ impl BuiltinPlanner {
         Ok(built)
     }
 
+    pub fn common_settings(&self) -> &CommonSettings {
+        match self {
+            BuiltinPlanner::Linux(inner) => &inner.settings,
+            BuiltinPlanner::SteamDeck(inner) => &inner.settings,
+            BuiltinPlanner::Ostree(inner) => &inner.settings,
+            BuiltinPlanner::Macos(inner) => &inner.settings,
+        }
+    }
+
+    pub fn common_settings_mut(&mut self) -> &mut CommonSettings {
+        match self {
+            BuiltinPlanner::Linux(inner) => &mut inner.settings,
+            BuiltinPlanner::SteamDeck(inner) => &mut inner.settings,
+            BuiltinPlanner::Ostree(inner) => &mut inner.settings,
+            BuiltinPlanner::Macos(inner) => &mut inner.settings,
+        }
+    }
+
     pub async fn configured_settings(
         &self,
     ) -> Result<HashMap<String, serde_json::Value>, PlannerError> {
@@ -285,18 +286,6 @@ impl BuiltinPlanner {
             BuiltinPlanner::SteamDeck(i) => i.settings(),
             BuiltinPlanner::Ostree(i) => i.settings(),
             BuiltinPlanner::Macos(i) => i.settings(),
-        }
-    }
-
-    #[cfg(feature = "diagnostics")]
-    pub async fn diagnostic_data(
-        &self,
-    ) -> Result<crate::diagnostics::DiagnosticData, PlannerError> {
-        match self {
-            BuiltinPlanner::Linux(i) => i.diagnostic_data().await,
-            BuiltinPlanner::SteamDeck(i) => i.diagnostic_data().await,
-            BuiltinPlanner::Ostree(i) => i.diagnostic_data().await,
-            BuiltinPlanner::Macos(i) => i.diagnostic_data().await,
         }
     }
 }
@@ -397,8 +386,6 @@ pub enum PlannerError {
     RosettaDetected,
     #[error("Determinate Nix is not available. See: https://determinate.systems/enterprise")]
     DeterminateNixUnavailable,
-    #[error("Running Nix on the EC2 instance store requires Determinate Nix to be enabled")]
-    Ec2InstanceStoreRequiresDeterminateNix,
     /// A Linux SELinux related error
     #[error("Unable to install on an SELinux system without common SELinux tooling, the binaries `restorecon`, and `semodule` are required")]
     SelinuxRequirements,
@@ -417,9 +404,6 @@ pub enum PlannerError {
     /// Failed to execute command
     #[error("Failed to execute command `{0}`")]
     Command(String, #[source] std::io::Error),
-    #[cfg(feature = "diagnostics")]
-    #[error(transparent)]
-    Diagnostic(#[from] crate::diagnostics::DiagnosticError),
 }
 
 impl HasExpectedErrors for PlannerError {
@@ -433,7 +417,6 @@ impl HasExpectedErrors for PlannerError {
             this @ PlannerError::IncompatibleOperatingSystem { .. } => Some(Box::new(this)),
             this @ PlannerError::RosettaDetected => Some(Box::new(this)),
             this @ PlannerError::DeterminateNixUnavailable => Some(Box::new(this)),
-            this @ PlannerError::Ec2InstanceStoreRequiresDeterminateNix => Some(Box::new(this)),
             PlannerError::OsRelease(_) => None,
             PlannerError::Utf8(_) => None,
             PlannerError::SelinuxRequirements => Some(Box::new(self)),
@@ -452,16 +435,6 @@ impl HasExpectedErrors for PlannerError {
             this @ PlannerError::NixExists => Some(Box::new(this)),
             this @ PlannerError::Wsl1 => Some(Box::new(this)),
             PlannerError::Command(_, _) => None,
-            #[cfg(feature = "diagnostics")]
-            PlannerError::Diagnostic(diagnostic_error) => Some(Box::new(diagnostic_error)),
         }
-    }
-}
-
-#[cfg(feature = "diagnostics")]
-impl crate::diagnostics::ErrorDiagnostic for PlannerError {
-    fn diagnostic(&self) -> String {
-        let static_str: &'static str = (self).into();
-        static_str.to_string()
     }
 }

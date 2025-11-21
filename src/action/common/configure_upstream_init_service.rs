@@ -15,7 +15,7 @@ const SERVICE_DEST: &str = "/etc/systemd/system/nix-daemon.service";
 // Darwin
 const DARWIN_NIX_DAEMON_SOURCE: &str =
     "/nix/var/nix/profiles/default/Library/LaunchDaemons/org.nixos.nix-daemon.plist";
-const DARWIN_NIX_DAEMON_DEST: &str = "/Library/LaunchDaemons/org.nixos.nix-daemon.plist";
+pub(crate) const DARWIN_NIX_DAEMON_DEST: &str = "/Library/LaunchDaemons/org.nixos.nix-daemon.plist";
 const DARWIN_LAUNCHD_SERVICE_NAME: &str = "org.nixos.nix-daemon";
 
 /**
@@ -33,9 +33,9 @@ impl ConfigureUpstreamInitService {
         init: InitSystem,
         start_daemon: bool,
     ) -> Result<StatefulAction<Self>, ActionError> {
-        let service_src: Option<PathBuf> = match init {
-            InitSystem::Launchd => Some(DARWIN_NIX_DAEMON_SOURCE.into()),
-            InitSystem::Systemd => Some(SERVICE_SRC.into()),
+        let service_src: Option<UnitSrc> = match init {
+            InitSystem::Launchd => Some(UnitSrc::Path(DARWIN_NIX_DAEMON_SOURCE.into())),
+            InitSystem::Systemd => Some(UnitSrc::Path(SERVICE_SRC.into())),
             InitSystem::None => None,
         };
         let service_dest: Option<PathBuf> = match init {

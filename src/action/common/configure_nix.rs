@@ -23,7 +23,7 @@ Configure Nix and start it
 pub struct ConfigureNix {
     setup_default_profile: StatefulAction<SetupDefaultProfile>,
     configure_shell_profile: Option<StatefulAction<ConfigureShellProfile>>,
-    place_nix_configuration: StatefulAction<PlaceNixConfiguration>,
+    place_nix_configuration: Option<StatefulAction<PlaceNixConfiguration>>,
     setup_channels: Option<StatefulAction<SetupChannels>>,
 }
 
@@ -32,7 +32,6 @@ impl ConfigureNix {
     pub async fn plan(
         shell_profile_locations: ShellProfileLocations,
         settings: &CommonSettings,
-        extra_internal_conf: Option<nix_config_parser::NixConfig>,
     ) -> Result<StatefulAction<Self>, ActionError> {
         let setup_default_profile = SetupDefaultProfile::plan(PathBuf::from(SCRATCH_DIR))
             .await
@@ -47,16 +46,22 @@ impl ConfigureNix {
         } else {
             None
         };
-        let place_nix_configuration = PlaceNixConfiguration::plan(
-            settings.nix_build_group_name.clone(),
-            settings.proxy.clone(),
-            settings.ssl_cert_file.clone(),
-            extra_internal_conf.clone(),
-            settings.extra_conf.clone(),
-            settings.force,
-        )
-        .await
-        .map_err(Self::error)?;
+
+        let place_nix_configuration = if settings.skip_nix_conf {
+            None
+        } else {
+            Some(
+                PlaceNixConfiguration::plan(
+                    settings.nix_build_group_name.clone(),
+                    settings.proxy.clone(),
+                    settings.ssl_cert_file.clone(),
+                    settings.extra_conf.clone(),
+                    settings.force,
+                )
+                .await
+                .map_err(Self::error)?,
+            )
+        };
 
         let setup_channels = if settings.add_channel {
             Some(
@@ -81,7 +86,7 @@ impl ConfigureNix {
         unpacked_path: &Path,
     ) -> Result<(PathBuf, PathBuf), ActionError> {
         // Find a `nix` package
-        let nix_pkg_glob = format!("{}/nix-*/store/*-nix-*.*.*", unpacked_path.display());
+        let nix_pkg_glob = format!("{}/nix-*/store/*-nix-*.*.*/bin", unpacked_path.display());
         let mut found_nix_pkg = None;
         for entry in glob(&nix_pkg_glob).map_err(Self::error)? {
             match entry {
@@ -89,15 +94,10 @@ impl ConfigureNix {
                     // If we are curing, the user may have multiple of these installed
                     if let Some(_existing) = found_nix_pkg {
                         return Err(Self::error(ConfigureNixError::MultipleNixPackages))?;
+                    } else {
+                        found_nix_pkg = path.parent().map(ToOwned::to_owned);
                     }
-
-                    // Ensure we don't pick up any of the split components introduced in Nix 2.29
-                    // (or any other path happened to be named `nix`...)
-                    let subpath = path.join("bin/nix");
-                    if subpath.exists() {
-                        found_nix_pkg = Some(path);
-                        break;
-                    }
+                    break;
                 },
                 Err(_) => continue, /* Ignore it */
             };
@@ -165,7 +165,9 @@ impl Action for ConfigureNix {
         } = &self;
 
         let mut buf = setup_default_profile.describe_execute();
-        buf.append(&mut place_nix_configuration.describe_execute());
+        if let Some(place_nix_configuration) = place_nix_configuration {
+            buf.append(&mut place_nix_configuration.describe_execute());
+        }
         if let Some(setup_channels) = setup_channels {
             buf.append(&mut setup_channels.describe_execute());
         }
@@ -189,53 +191,22 @@ impl Action for ConfigureNix {
             .is_some()
             .then(|| setup_default_profile_span.clone());
 
+        if let Some(place_nix_configuration) = place_nix_configuration {
+            place_nix_configuration
+                .try_execute()
+                .await
+                .map_err(Self::error)?;
+        }
+        setup_default_profile
+            .try_execute()
+            .await
+            .map_err(Self::error)?;
         if let Some(configure_shell_profile) = configure_shell_profile {
-            let (place_nix_configuration_span, configure_shell_profile_span) = (
-                setup_default_profile_span.clone(),
-                setup_default_profile_span.clone(),
-            );
-            tokio::try_join!(
-                async move {
-                    setup_default_profile
-                        .try_execute()
-                        .instrument(setup_default_profile_span)
-                        .await
-                        .map_err(Self::error)
-                },
-                async move {
-                    place_nix_configuration
-                        .try_execute()
-                        .instrument(place_nix_configuration_span)
-                        .await
-                        .map_err(Self::error)
-                },
-                async move {
-                    configure_shell_profile
-                        .try_execute()
-                        .instrument(configure_shell_profile_span)
-                        .await
-                        .map_err(Self::error)
-                },
-            )?;
-        } else {
-            let place_nix_configuration_span = setup_default_profile_span.clone();
-            tokio::try_join!(
-                async move {
-                    setup_default_profile
-                        .try_execute()
-                        .instrument(setup_default_profile_span)
-                        .await
-                        .map_err(Self::error)
-                },
-                async move {
-                    place_nix_configuration
-                        .try_execute()
-                        .instrument(place_nix_configuration_span)
-                        .await
-                        .map_err(Self::error)
-                },
-            )?;
-        };
+            configure_shell_profile
+                .try_execute()
+                .await
+                .map_err(Self::error)?;
+        }
 
         // Keep setup_channels outside try_join to avoid the error:
         // SQLite database '/nix/var/nix/db/db.sqlite' is busy
@@ -264,7 +235,9 @@ impl Action for ConfigureNix {
         if let Some(configure_shell_profile) = configure_shell_profile {
             buf.append(&mut configure_shell_profile.describe_revert());
         }
-        buf.append(&mut place_nix_configuration.describe_revert());
+        if let Some(place_nix_configuration) = place_nix_configuration {
+            buf.append(&mut place_nix_configuration.describe_revert());
+        }
         buf.append(&mut setup_default_profile.describe_revert());
         if let Some(setup_channels) = setup_channels {
             buf.append(&mut setup_channels.describe_revert());
@@ -281,12 +254,15 @@ impl Action for ConfigureNix {
                 errors.push(err);
             }
         }
-        if let Err(err) = self.place_nix_configuration.try_revert().await {
-            errors.push(err);
+        if let Some(place_nix_configuration) = &mut self.place_nix_configuration {
+            if let Err(err) = place_nix_configuration.try_revert().await {
+                errors.push(err);
+            }
         }
         if let Err(err) = self.setup_default_profile.try_revert().await {
             errors.push(err);
         }
+
         if let Some(setup_channels) = &mut self.setup_channels {
             if let Err(err) = setup_channels.try_revert().await {
                 errors.push(err);

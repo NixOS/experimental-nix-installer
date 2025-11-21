@@ -26,27 +26,6 @@ pub enum SelfTestError {
     SystemTime(#[from] std::time::SystemTimeError),
 }
 
-#[cfg(feature = "diagnostics")]
-impl crate::diagnostics::ErrorDiagnostic for SelfTestError {
-    fn diagnostic(&self) -> String {
-        let static_str: &'static str = (self).into();
-        let context = match self {
-            Self::ShellFailed { shell, .. } => vec![shell.to_string()],
-            Self::Command { shell, .. } => vec![shell.to_string()],
-            Self::SystemTime(_) => vec![],
-        };
-        format!(
-            "{}({})",
-            static_str,
-            context
-                .iter()
-                .map(|v| format!("\"{v}\""))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub enum Shell {
     Sh,
@@ -105,7 +84,7 @@ impl Shell {
             .as_millis();
 
         command.arg(format!(
-            r#"nix-build --option substitute false --no-link --expr 'derivation {{ name = "self-test-{executable}-{timestamp_millis}"; system = "{SYSTEM}"; builder = "/bin/sh"; args = ["-c" "echo hello > \$out"]; }}'"#
+            r#"exec nix build --option substitute false --option post-build-hook '' --no-link --expr 'derivation {{ name = "self-test-{executable}-{timestamp_millis}"; system = "{SYSTEM}"; builder = "/bin/sh"; args = ["-c" "echo hello > \$out"]; }}'"#
         ));
         let command_str = format!("{:?}", command.as_std());
 
@@ -114,6 +93,8 @@ impl Shell {
             "Testing Nix install via `{executable}`"
         );
         let output = command
+            .stdin(std::process::Stdio::null())
+            .env("NIX_REMOTE", "daemon")
             .output()
             .await
             .map_err(|error| SelfTestError::Command {

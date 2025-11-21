@@ -10,6 +10,28 @@ pub struct DiskUtilInfoOutput {
 }
 
 impl DiskUtilInfoOutput {
+    pub async fn for_volume_name(
+        volume_name: &str,
+    ) -> Result<Self, crate::action::ActionErrorKind> {
+        Self::for_volume_path(std::path::Path::new(volume_name)).await
+    }
+
+    pub async fn for_volume_path(
+        volume_path: &std::path::Path,
+    ) -> Result<Self, crate::action::ActionErrorKind> {
+        let buf = crate::execute_command(
+            tokio::process::Command::new("/usr/sbin/diskutil")
+                .process_group(0)
+                .args(["info", "-plist"])
+                .arg(volume_path)
+                .stdin(std::process::Stdio::null()),
+        )
+        .await?
+        .stdout;
+
+        Ok(plist::from_reader(std::io::Cursor::new(buf))?)
+    }
+
     pub fn is_mounted(&self) -> bool {
         match self.mount_point {
             None => false,
@@ -34,21 +56,5 @@ pub struct DiskUtilApfsContainer {
 #[serde(rename_all = "PascalCase")]
 pub struct DiskUtilApfsListVolume {
     pub name: Option<String>,
-    pub encryption: bool,
-}
-
-#[derive(serde::Deserialize, Clone, Debug)]
-#[serde(rename_all = "PascalCase")]
-pub struct DiskUtilList {
-    pub all_disks_and_partitions: Vec<DiskUtilListDisk>,
-}
-
-#[derive(serde::Deserialize, Clone, Debug)]
-#[serde(rename_all = "PascalCase")]
-pub struct DiskUtilListDisk {
-    #[serde(rename = "OSInternal")]
-    pub os_internal: bool,
-    pub device_identifier: String,
-    #[serde(rename = "Size")]
-    pub size_bytes: u64,
+    pub file_vault: Option<bool>,
 }

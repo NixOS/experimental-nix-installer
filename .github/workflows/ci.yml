@@ -34,6 +34,9 @@ jobs:
 
       - name: Install Nix
         uses: ./.github/actions/install-nix-action
+        with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
 
       - name: Build the installer
         run: |
@@ -75,6 +78,8 @@ jobs:
 
       - name: Install Nix
         uses: ./.github/actions/install-nix-action
+        with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - name: Check rustfmt
         run: nix develop --command check-rustfmt
@@ -143,17 +148,11 @@ jobs:
       - name: Initial install
         uses: ./.github/actions/install-nix-action
         with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           dogfood: true
           dogfood-path: ${{ steps.download-installer.outputs.download-path }}
           use-cache: false
           no-init: ${{ matrix.no-init }}
-
-      - name: "Validate dnixd is uninstalled"
-        run: |
-          if test -x /usr/local/bin/determinate-nixd; then
-            echo "determinate-nixd is present"
-            exit 1
-          fi
 
       - name: Ensure daemon was not configured with init
         if: ${{ matrix.no-init != '' }}
@@ -194,6 +193,7 @@ jobs:
       - name: Repeated install
         uses: ./.github/actions/install-nix-action
         with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           dogfood: true
           dogfood-path: ${{ steps.download-installer.outputs.download-path }}
           use-cache: false
@@ -222,8 +222,6 @@ jobs:
           sudo -i hello
           sudo -i nix-store --gc
           sudo -i nix-shell -p hello --command hello
-
-          sudo -E /nix/nix-installer self-test
 
       - name: Repeated uninstall
         run: sudo -E /nix/nix-installer uninstall
@@ -280,6 +278,7 @@ jobs:
       - name: Initial install
         uses: ./.github/actions/install-nix-action
         with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           dogfood: true
           dogfood-path: ${{ steps.download-installer.outputs.download-path }}
 

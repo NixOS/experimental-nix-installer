@@ -4,37 +4,14 @@
   inputs = {
     # can track upstream versioning with
     # git show $most_recently_merged_commit:flake.lock | jq '.nodes[.nodes.root.inputs.nixpkgs].locked.rev'
-    nixpkgs.url = "github:NixOS/nixpkgs/807e9154dcb16384b1b765ebe9cd2bba2ac287fd";
+    nixpkgs.url = "github:NixOS/nixpkgs/d98ce345cdab58477ca61855540999c86577d19d";
 
-    fenix = {
-      # can track upstream versioning with
-      # git show $most_recently_merged_commit:flake.lock | jq '.nodes[.nodes.root.inputs.fenix].locked.rev'
-      url = "github:nix-community/fenix/a9d2e5fa8d77af05240230c9569bbbddd28ccfaf";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    naersk = {
-      url = "github:nix-community/naersk";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    crane.url = "github:ipetkov/crane/v0.20.0";
 
     nix = {
-      url = "github:NixOS/nix/2.24.9";
+      url = "github:NixOS/nix/2.32.0";
       # Omitting `inputs.nixpkgs.follows = "nixpkgs";` on purpose
     };
-    # We don't use this, so let's save download/update time
-    # determinate = {
-    #   url = "https://flakehub.com/f/DeterminateSystems/determinate/0.1.tar.gz";
-
-    #   # We set the overrides below so the flake.lock has many fewer nodes.
-    #   #
-    #   # The `determinate` input is used to access the builds of `determinate-nixd`.
-    #   # Below, we access the `packages` outputs, which download static builds of `determinate-nixd` and makes them executable.
-    #   # The way we consume the determinate flake means the `nix` and `nixpkgs` inputs are not meaningfully used.
-    #   # This means `follows` won't cause surprisingly extensive rebuilds, just trivial `chmod +x` rebuilds.
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    #   inputs.nix.follows = "nix";
-    # };
 
     flake-compat.url = "github:edolstra/flake-compat/v1.0.0";
   };
@@ -42,15 +19,12 @@
   outputs =
     { self
     , nixpkgs
-    , fenix
-    , naersk
-    , nix
-      # , determinate
+    , crane
     , ...
-    } @ inputs:
+    }:
     let
+      nix_tarball_url_prefix = "https://releases.nixos.org/nix/nix-2.32.0/nix-2.32.0-";
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      systemsSupportedByDeterminateNixd = [ ]; # avoid refs to detsys nixd for now
 
       forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: (forSystem system f));
 
@@ -60,72 +34,45 @@
         lib = pkgs.lib;
       };
 
-      fenixToolchain = system: with fenix.packages.${system};
-        combine ([
-          stable.clippy
-          stable.rustc
-          stable.cargo
-          stable.rustfmt
-          stable.rust-src
-        ] ++ nixpkgs.lib.optionals (system == "x86_64-linux") [
-          targets.x86_64-unknown-linux-musl.stable.rust-std
-        ] ++ nixpkgs.lib.optionals (system == "aarch64-linux") [
-          targets.aarch64-unknown-linux-musl.stable.rust-std
-        ]);
-
-      nixTarballs = forAllSystems ({ system, ... }:
-        inputs.nix.tarballs_direct.${system}
-          or "${inputs.nix.checks."${system}".binaryTarball}/nix-${inputs.nix.packages."${system}".default.version}-${system}.tar.xz");
-
-      optionalPathToDeterminateNixd = system: if builtins.elem system systemsSupportedByDeterminateNixd then "${inputs.determinate.packages.${system}.default}/bin/determinate-nixd" else null;
-    in
-    {
-      overlays.default = final: prev:
+      installerPackage = { pkgs, stdenv, buildPackages, extraRustFlags ? "" }:
         let
-          toolchain = fenixToolchain final.stdenv.system;
-          naerskLib = final.callPackage naersk {
-            cargo = toolchain;
-            rustc = toolchain;
-          };
+          craneLib = crane.mkLib pkgs;
           sharedAttrs = {
-            pname = "nix-installer";
-            version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
             src = builtins.path {
               name = "nix-installer-source";
               path = self;
               filter = (path: type: baseNameOf path != "nix" && baseNameOf path != ".github");
             };
 
-            nativeBuildInputs = with final; [ ];
-            buildInputs = with final; [ ] ++ lib.optionals (final.stdenv.isDarwin) (with final.darwin.apple_sdk.frameworks; [
-              SystemConfiguration
-              # temporary fix for naersk to nix flake update; see df13b0b upstream
-              final.darwin.libiconv
-            ]);
+            # Required to link build scripts.
+            depsBuildBuild = [ buildPackages.stdenv.cc ];
 
-            copyBins = true;
-            copyDocsToSeparateOutput = true;
-
-            doCheck = false;
-            doDoc = true;
-            doDocFail = true;
-            RUSTFLAGS = "--cfg tokio_unstable";
-            cargoTestOptions = f: f ++ [ "--all" ];
-
-            NIX_INSTALLER_TARBALL_PATH = nixTarballs.${final.stdenv.system};
-            DETERMINATE_NIXD_BINARY_PATH = optionalPathToDeterminateNixd final.stdenv.system;
-
-            override = { preBuild ? "", ... }: {
-              preBuild = preBuild + ''
-                # logRun "cargo clippy --all-targets --all-features -- -D warnings"
-              '';
+            env = {
+              # For whatever reason, these don't seem to get set
+              # automatically when using crane.
+              #
+              # Possibly related: <https://github.com/NixOS/nixpkgs/pull/369424>
+              "CC_${stdenv.hostPlatform.rust.cargoEnvVarTarget}" = "${stdenv.cc.targetPrefix}cc";
+              "CXX_${stdenv.hostPlatform.rust.cargoEnvVarTarget}" = "${stdenv.cc.targetPrefix}c++";
+              "CARGO_TARGET_${stdenv.hostPlatform.rust.cargoEnvVarTarget}_LINKER" = "${stdenv.cc.targetPrefix}cc";
+              CARGO_BUILD_TARGET = stdenv.hostPlatform.rust.rustcTarget;
             };
-            postInstall = ''
-              cp nix-installer.sh $out/bin/nix-installer.sh
-            '';
           };
         in
-        rec {
+        craneLib.buildPackage (sharedAttrs // {
+          cargoArtifacts = craneLib.buildDepsOnly sharedAttrs;
+          env = sharedAttrs.env // {
+            RUSTFLAGS = "--cfg tokio_unstable${if extraRustFlags != "" then " ${extraRustFlags}" else ""}";
+            NIX_TARBALL_URL = "${nix_tarball_url_prefix}${stdenv.hostPlatform.system}.tar.xz";
+          };
+          postInstall = ''
+            cp nix-installer.sh $out/bin/nix-installer.sh
+          '';
+        });
+    in
+    {
+      overlays.default = final: prev:
+        {
           # NOTE(cole-h): fixes build -- nixpkgs updated libsepol to 3.7 but didn't update
           # checkpolicy to 3.7, checkpolicy links against libsepol, and libsepol 3.7 changed
           # something in the API so checkpolicy 3.6 failed to build against libsepol 3.7
@@ -139,38 +86,32 @@
             };
           });
 
-          nix-installer = naerskLib.buildPackage sharedAttrs;
-        } // nixpkgs.lib.optionalAttrs (prev.stdenv.system == "x86_64-linux") rec {
-          default = nix-installer-static;
-          nix-installer-static = naerskLib.buildPackage
-            (sharedAttrs // {
-              CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
-            });
-        } // nixpkgs.lib.optionalAttrs (prev.stdenv.system == "aarch64-linux") rec {
-          default = nix-installer-static;
-          nix-installer-static = naerskLib.buildPackage
-            (sharedAttrs // {
-              CARGO_BUILD_TARGET = "aarch64-unknown-linux-musl";
-            });
+          nix-installer = installerPackage {
+            pkgs = final;
+            stdenv = final.stdenv;
+            buildPackages = final.buildPackages;
+          };
+
+          nix-installer-static = final.pkgsStatic.callPackage installerPackage { };
         };
 
 
-      devShells = forAllSystems ({ system, pkgs, ... }:
+      devShells = forAllSystems ({ pkgs, ... }:
         let
-          toolchain = fenixToolchain system;
-          check = import ./nix/check.nix { inherit pkgs toolchain; };
+          check = import ./nix/check.nix { inherit pkgs; };
         in
         {
           default = pkgs.mkShell {
             name = "nix-install-shell";
 
-            RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
-            NIX_INSTALLER_TARBALL_PATH = nixTarballs.${system};
-            DETERMINATE_NIXD_BINARY_PATH = optionalPathToDeterminateNixd system;
+            RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}/library";
+            NIX_TARBALL_URL = "${nix_tarball_url_prefix}${pkgs.stdenv.hostPlatform.system}.tar.xz";
 
-            nativeBuildInputs = with pkgs; [ ];
             buildInputs = with pkgs; [
-              toolchain
+              rustc
+              cargo
+              clippy
+              rustfmt
               shellcheck
               rust-analyzer
               cargo-outdated
@@ -199,10 +140,9 @@
           };
         });
 
-      checks = forAllSystems ({ system, pkgs, ... }:
+      checks = forAllSystems ({ pkgs, ... }:
         let
-          toolchain = fenixToolchain system;
-          check = import ./nix/check.nix { inherit pkgs toolchain; };
+          check = import ./nix/check.nix { inherit pkgs; };
         in
         {
           check-rustfmt = pkgs.runCommand "check-rustfmt" { buildInputs = [ check.check-rustfmt ]; } ''

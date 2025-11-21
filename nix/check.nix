@@ -1,4 +1,4 @@
-{ pkgs, toolchain }:
+{ pkgs }:
 
 let
   inherit (pkgs) writeShellApplication;
@@ -8,7 +8,7 @@ in
   # Format
   check-rustfmt = (writeShellApplication {
     name = "check-rustfmt";
-    runtimeInputs = [ toolchain ];
+    runtimeInputs = with pkgs; [ cargo rustfmt ];
     text = "cargo fmt --check";
   });
 
@@ -19,7 +19,7 @@ in
     text = ''
       codespell \
         --ignore-words-list="ba,sur,crate,pullrequest,pullrequests,ser,distroname" \
-        --skip="./target,.git,./src/action/linux/selinux" \
+        --skip="./target,.git,./src/action/linux/selinux,*.lock" \
         .
     '';
   });

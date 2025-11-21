@@ -7,23 +7,17 @@ use super::ShellProfileLocations;
 use crate::{
     action::{
         base::{CreateDirectory, RemoveDirectory},
-        common::{
-            ConfigureDeterminateNixdInitService, ConfigureNix, ConfigureUpstreamInitService,
-            CreateUsersAndGroups, ProvisionDeterminateNixd, ProvisionNix,
-        },
-        linux::{
-            provision_selinux::{DETERMINATE_SELINUX_POLICY_PP_CONTENT, SELINUX_POLICY_PP_CONTENT},
-            ProvisionSelinux,
-        },
+        common::{ConfigureNix, ConfigureUpstreamInitService, CreateUsersAndGroups, ProvisionNix},
+        linux::{provision_selinux::SELINUX_POLICY_PP_CONTENT, ProvisionSelinux},
         StatefulAction,
     },
     error::HasExpectedErrors,
     planner::{Planner, PlannerError},
-    settings::{
-        determinate_nix_settings, CommonSettings, InitSettings, InitSystem, InstallSettingsError,
-    },
+    settings::{CommonSettings, InitSettings, InitSystem, InstallSettingsError},
     Action, BuiltinPlanner,
 };
+
+pub const FHS_SELINUX_POLICY_PATH: &str = "/usr/share/selinux/packages/nix.pp";
 
 /// A planner for traditional, mutable Linux systems like Debian, RHEL, or Arch
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -57,15 +51,6 @@ impl Planner for Linux {
                 .boxed(),
         );
 
-        if self.settings.determinate_nix {
-            plan.push(
-                ProvisionDeterminateNixd::plan()
-                    .await
-                    .map_err(PlannerError::Action)?
-                    .boxed(),
-            );
-        }
-
         plan.push(
             ProvisionNix::plan(&self.settings.clone())
                 .await
@@ -79,29 +64,18 @@ impl Planner for Linux {
                 .boxed(),
         );
         plan.push(
-            ConfigureNix::plan(
-                ShellProfileLocations::default(),
-                &self.settings,
-                self.settings.determinate_nix.then(determinate_nix_settings),
-            )
-            .await
-            .map_err(PlannerError::Action)?
-            .boxed(),
+            ConfigureNix::plan(ShellProfileLocations::default(), &self.settings)
+                .await
+                .map_err(PlannerError::Action)?
+                .boxed(),
         );
 
         if has_selinux {
             plan.push(
-                ProvisionSelinux::plan(
-                    "/usr/share/selinux/packages/nix.pp".into(),
-                    if self.settings.determinate_nix {
-                        DETERMINATE_SELINUX_POLICY_PP_CONTENT
-                    } else {
-                        SELINUX_POLICY_PP_CONTENT
-                    },
-                )
-                .await
-                .map_err(PlannerError::Action)?
-                .boxed(),
+                ProvisionSelinux::plan(FHS_SELINUX_POLICY_PATH.into(), SELINUX_POLICY_PP_CONTENT)
+                    .await
+                    .map_err(PlannerError::Action)?
+                    .boxed(),
             );
         }
 
@@ -112,22 +86,12 @@ impl Planner for Linux {
                 .boxed(),
         );
 
-        if self.settings.determinate_nix {
-            // effectively disabled by skipping the cli option in settings.rs
-            plan.push(
-                ConfigureDeterminateNixdInitService::plan(self.init.init, self.init.start_daemon)
-                    .await
-                    .map_err(PlannerError::Action)?
-                    .boxed(),
-            );
-        } else {
-            plan.push(
-                ConfigureUpstreamInitService::plan(self.init.init, self.init.start_daemon)
-                    .await
-                    .map_err(PlannerError::Action)?
-                    .boxed(),
-            );
-        }
+        plan.push(
+            ConfigureUpstreamInitService::plan(self.init.init, self.init.start_daemon)
+                .await
+                .map_err(PlannerError::Action)?
+                .boxed(),
+        );
         plan.push(
             RemoveDirectory::plan(crate::settings::SCRATCH_DIR)
                 .await
@@ -162,20 +126,6 @@ impl Planner for Linux {
         }
 
         Ok(settings)
-    }
-
-    #[cfg(feature = "diagnostics")]
-    async fn diagnostic_data(&self) -> Result<crate::diagnostics::DiagnosticData, PlannerError> {
-        Ok(crate::diagnostics::DiagnosticData::new(
-            self.settings.diagnostic_attribution.clone(),
-            self.settings.diagnostic_endpoint.clone(),
-            self.typetag_name().into(),
-            self.configured_settings()
-                .await?
-                .into_keys()
-                .collect::<Vec<_>>(),
-            self.settings.ssl_cert_file.clone(),
-        )?)
     }
 
     async fn platform_check(&self) -> Result<(), PlannerError> {

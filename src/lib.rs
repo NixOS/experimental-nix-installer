@@ -1,3 +1,6 @@
+// .filter_map() predicates returns Some/None, which is more clear than .filter()'s -> bool predicates.
+#![allow(clippy::unnecessary_filter_map)]
+
 /*! The Determinate [Nix](https://github.com/NixOS/nix) Installer
 
 `nix-installer` breaks down into three main concepts:
@@ -16,7 +19,6 @@ it, uninstalling if anything goes wrong:
 ```rust,no_run
 use std::error::Error;
 use nix_installer::InstallPlan;
-
 # async fn default_install() -> color_eyre::Result<()> {
 let mut plan = InstallPlan::default().await?;
 match plan.install(None).await {
@@ -33,9 +35,7 @@ match plan.install(None).await {
 # Ok(())
 # }
 ```
-
 Sometimes choosing a specific planner is desired:
-
 ```rust,no_run
 use std::error::Error;
 use nix_installer::{InstallPlan, planner::Planner};
@@ -72,14 +72,14 @@ match plan.install(None).await {
 pub mod action;
 #[cfg(feature = "cli")]
 pub mod cli;
-#[cfg(feature = "diagnostics")]
-pub mod diagnostics;
 mod error;
 mod os;
 mod plan;
 pub mod planner;
+mod profile;
 pub mod self_test;
 pub mod settings;
+mod util;
 
 use std::{ffi::OsStr, path::Path, process::Output};
 

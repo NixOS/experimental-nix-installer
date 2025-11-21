@@ -74,14 +74,6 @@ pub enum NixInstallerError {
         InstallSettingsError,
     ),
 
-    #[cfg(feature = "diagnostics")]
-    /// Diagnostic error
-    #[error("Diagnostic error")]
-    Diagnostic(
-        #[from]
-        #[source]
-        crate::diagnostics::DiagnosticError,
-    ),
     /// Could not parse the value as a version requirement in order to ensure it's compatible
     #[error("Could not parse `{0}` as a version requirement in order to ensure it's compatible")]
     InvalidVersionRequirement(String, semver::Error),
@@ -106,7 +98,7 @@ impl HasExpectedErrors for NixInstallerError {
             NixInstallerError::RecordingReceipt(_, _) => None,
             NixInstallerError::CopyingSelf(_) => None,
             NixInstallerError::SerializingReceipt(_) => None,
-            this @ NixInstallerError::Cancelled => Some(Box::new(this)),
+            NixInstallerError::Cancelled => None,
             NixInstallerError::SemVer(_) => None,
             NixInstallerError::Planner(planner_error) => planner_error.expected(),
             NixInstallerError::InstallSettings(_) => None,
@@ -115,36 +107,6 @@ impl HasExpectedErrors for NixInstallerError {
             this @ NixInstallerError::IncompatibleVersion { binary: _, plan: _ } => {
                 Some(Box::new(this))
             },
-            #[cfg(feature = "diagnostics")]
-            NixInstallerError::Diagnostic(_) => None,
         }
-    }
-}
-
-#[cfg(feature = "diagnostics")]
-impl crate::diagnostics::ErrorDiagnostic for NixInstallerError {
-    fn diagnostic(&self) -> String {
-        let static_str: &'static str = (self).into();
-        let context = match self {
-            Self::SelfTest(self_tests) => self_tests
-                .iter()
-                .map(|self_test| self_test.diagnostic())
-                .collect::<Vec<_>>(),
-            Self::Action(action_error) => vec![action_error.diagnostic()],
-            Self::ActionRevert(action_errors) => action_errors
-                .iter()
-                .map(|action_error| action_error.diagnostic())
-                .collect(),
-            _ => vec![],
-        };
-        format!(
-            "{}({})",
-            static_str,
-            context
-                .iter()
-                .map(|v| format!("\"{v}\""))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
     }
 }

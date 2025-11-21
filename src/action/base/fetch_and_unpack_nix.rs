@@ -8,6 +8,7 @@ use crate::{
     action::{Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction},
     parse_ssl_cert,
     settings::UrlOrPath,
+    util::OnMissing,
 };
 
 /**
@@ -16,7 +17,7 @@ Fetch a URL to the given path
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 #[serde(tag = "action_name", rename = "fetch_and_unpack_nix")]
 pub struct FetchAndUnpackNix {
-    url_or_path: Option<UrlOrPath>,
+    url_or_path: UrlOrPath,
     dest: PathBuf,
     proxy: Option<Url>,
     ssl_cert_file: Option<PathBuf>,
@@ -25,7 +26,7 @@ pub struct FetchAndUnpackNix {
 impl FetchAndUnpackNix {
     #[tracing::instrument(level = "debug", skip_all)]
     pub async fn plan(
-        url_or_path: Option<UrlOrPath>,
+        url_or_path: UrlOrPath,
         dest: PathBuf,
         proxy: Option<Url>,
         ssl_cert_file: Option<PathBuf>,
@@ -33,7 +34,7 @@ impl FetchAndUnpackNix {
         // TODO(@hoverbear): Check URL exists?
         // TODO(@hoverbear): Check tempdir exists
 
-        if let Some(UrlOrPath::Url(url)) = &url_or_path {
+        if let UrlOrPath::Url(url) = &url_or_path {
             match url.scheme() {
                 "https" | "http" | "file" => (),
                 _ => return Err(Self::error(ActionErrorKind::UnknownUrlScheme)),
@@ -68,21 +69,14 @@ impl Action for FetchAndUnpackNix {
         ActionTag("fetch_and_unpack_nix")
     }
     fn tracing_synopsis(&self) -> String {
-        if let Some(ref url_or_path) = self.url_or_path {
-            format!("Fetch `{}` to `{}`", url_or_path, self.dest.display())
-        } else {
-            format!(
-                "Extract the bundled Nix (originally from {})",
-                crate::settings::NIX_TARBALL_PATH
-            )
-        }
+        format!("Fetch `{}` to `{}`", self.url_or_path, self.dest.display())
     }
 
     fn tracing_span(&self) -> Span {
         let span = span!(
             tracing::Level::DEBUG,
             "fetch_and_unpack_nix",
-            url_or_path = self.url_or_path.as_ref().map(tracing::field::display),
+            url_or_path = tracing::field::display(&self.url_or_path),
             proxy = tracing::field::Empty,
             ssl_cert_file = tracing::field::Empty,
             dest = tracing::field::display(self.dest.display()),
@@ -106,8 +100,7 @@ impl Action for FetchAndUnpackNix {
     #[tracing::instrument(level = "debug", skip_all)]
     async fn execute(&mut self) -> Result<(), ActionError> {
         let bytes = match &self.url_or_path {
-            &None => Bytes::from(crate::settings::NIX_TARBALL),
-            Some(UrlOrPath::Url(url)) => {
+            UrlOrPath::Url(url) => {
                 let bytes = match url.scheme() {
                     "https" | "http" => {
                         let mut buildable_client = reqwest::Client::builder();
@@ -153,10 +146,10 @@ impl Action for FetchAndUnpackNix {
                 };
                 bytes
             },
-            Some(UrlOrPath::Path(path)) => {
+            UrlOrPath::Path(path) => {
                 let buf = tokio::fs::read(path)
                     .await
-                    .map_err(|e| ActionErrorKind::Read(PathBuf::from(path), e))
+                    .map_err(|e| ActionErrorKind::Read(path.clone(), e))
                     .map_err(Self::error)?;
                 Bytes::from(buf)
             },
@@ -164,7 +157,15 @@ impl Action for FetchAndUnpackNix {
 
         // TODO(@Hoverbear): Pick directory
         tracing::trace!("Unpacking tar.xz");
-        let dest_clone = self.dest.clone();
+
+        // NOTE(cole-h): If the destination exists (because maybe a previous install failed), we
+        // want to remove it so that tar doesn't complain with:
+        //     trying to unpack outside of destination path: /nix/temp-install-dir
+        if self.dest.exists() {
+            crate::util::remove_dir_all(&self.dest, OnMissing::Ignore)
+                .await
+                .map_err(|e| Self::error(ActionErrorKind::Remove(self.dest.clone(), e)))?;
+        }
 
         let decoder = xz2::read::XzDecoder::new(bytes.reader());
         let mut archive = tar::Archive::new(decoder);
@@ -172,7 +173,7 @@ impl Action for FetchAndUnpackNix {
         archive.set_preserve_mtime(true);
         archive.set_unpack_xattrs(true);
         archive
-            .unpack(&dest_clone)
+            .unpack(&self.dest)
             .map_err(FetchUrlError::Unarchive)
             .map_err(Self::error)?;
 
