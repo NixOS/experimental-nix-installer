@@ -173,7 +173,7 @@ pub struct CommonSettings {
             default_value = "true",
             global = true,
             env = "NIX_INSTALLER_ADD_CHANNEL",
-            long("no-add-channel"),
+            long("add-channel"),
         )
     )]
     pub add_channel: bool,

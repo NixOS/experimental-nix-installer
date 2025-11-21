@@ -13,7 +13,7 @@ use glob::glob;
 
 use crate::action::common::SetupChannels;
 
-use tracing::{span, Span};
+use tracing::{span, Instrument, Span};
 
 /**
 Configure Nix and start it
@@ -186,6 +186,11 @@ impl Action for ConfigureNix {
             setup_channels,
         } = self;
 
+        let setup_default_profile_span = tracing::Span::current().clone();
+        let setup_channels_span = setup_channels
+            .is_some()
+            .then(|| setup_default_profile_span.clone());
+
         if let Some(place_nix_configuration) = place_nix_configuration {
             place_nix_configuration
                 .try_execute()
@@ -196,15 +201,23 @@ impl Action for ConfigureNix {
             .try_execute()
             .await
             .map_err(Self::error)?;
-        let setup_default_profile_span = tracing::Span::current().clone();
-        setup_channels
-            .is_some()
-            .then(|| setup_default_profile_span.clone());
         if let Some(configure_shell_profile) = configure_shell_profile {
             configure_shell_profile
                 .try_execute()
                 .await
                 .map_err(Self::error)?;
+        }
+
+        // Keep setup_channels outside try_join to avoid the error:
+        // SQLite database '/nix/var/nix/db/db.sqlite' is busy
+        // Presumably there are conflicts with nix commands run in
+        // setup_default_profile.
+        if let Some(setup_channels) = setup_channels {
+            setup_channels
+                .try_execute()
+                .instrument(setup_channels_span.unwrap())
+                .await
+                .map_err(Self::error)?
         }
 
         Ok(())
