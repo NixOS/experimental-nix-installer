@@ -11,6 +11,8 @@ use crate::{
 };
 use glob::glob;
 
+use crate::action::common::SetupChannels;
+
 use tracing::{span, Span};
 
 /**
@@ -22,6 +24,7 @@ pub struct ConfigureNix {
     setup_default_profile: StatefulAction<SetupDefaultProfile>,
     configure_shell_profile: Option<StatefulAction<ConfigureShellProfile>>,
     place_nix_configuration: Option<StatefulAction<PlaceNixConfiguration>>,
+    setup_channels: Option<StatefulAction<SetupChannels>>,
 }
 
 impl ConfigureNix {
@@ -60,10 +63,21 @@ impl ConfigureNix {
             )
         };
 
+        let setup_channels = if settings.add_channel {
+            Some(
+                SetupChannels::plan(PathBuf::from(SCRATCH_DIR))
+                    .await
+                    .map_err(Self::error)?,
+            )
+        } else {
+            None
+        };
+
         Ok(Self {
             place_nix_configuration,
             setup_default_profile,
             configure_shell_profile,
+            setup_channels,
         }
         .into())
     }
@@ -147,11 +161,15 @@ impl Action for ConfigureNix {
             setup_default_profile,
             place_nix_configuration,
             configure_shell_profile,
+            setup_channels,
         } = &self;
 
         let mut buf = setup_default_profile.describe_execute();
         if let Some(place_nix_configuration) = place_nix_configuration {
             buf.append(&mut place_nix_configuration.describe_execute());
+        }
+        if let Some(setup_channels) = setup_channels {
+            buf.append(&mut setup_channels.describe_execute());
         }
         if let Some(configure_shell_profile) = configure_shell_profile {
             buf.append(&mut configure_shell_profile.describe_execute());
@@ -165,6 +183,7 @@ impl Action for ConfigureNix {
             setup_default_profile,
             place_nix_configuration,
             configure_shell_profile,
+            setup_channels,
         } = self;
 
         if let Some(place_nix_configuration) = place_nix_configuration {
@@ -177,6 +196,10 @@ impl Action for ConfigureNix {
             .try_execute()
             .await
             .map_err(Self::error)?;
+        let setup_default_profile_span = tracing::Span::current().clone();
+        setup_channels
+            .is_some()
+            .then(|| setup_default_profile_span.clone());
         if let Some(configure_shell_profile) = configure_shell_profile {
             configure_shell_profile
                 .try_execute()
@@ -192,6 +215,7 @@ impl Action for ConfigureNix {
             setup_default_profile,
             place_nix_configuration,
             configure_shell_profile,
+            setup_channels,
         } = &self;
 
         let mut buf = Vec::default();
@@ -202,6 +226,9 @@ impl Action for ConfigureNix {
             buf.append(&mut place_nix_configuration.describe_revert());
         }
         buf.append(&mut setup_default_profile.describe_revert());
+        if let Some(setup_channels) = setup_channels {
+            buf.append(&mut setup_channels.describe_revert());
+        }
 
         buf
     }
@@ -221,6 +248,12 @@ impl Action for ConfigureNix {
         }
         if let Err(err) = self.setup_default_profile.try_revert().await {
             errors.push(err);
+        }
+
+        if let Some(setup_channels) = &mut self.setup_channels {
+            if let Err(err) = setup_channels.try_revert().await {
+                errors.push(err);
+            }
         }
 
         if errors.is_empty() {

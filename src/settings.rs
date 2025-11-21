@@ -241,7 +241,7 @@ impl CommonSettings {
             force: false,
             skip_nix_conf: false,
             ssl_cert_file: Default::default(),
-            add_channel: false,
+            add_channel: true,
         })
     }
 
