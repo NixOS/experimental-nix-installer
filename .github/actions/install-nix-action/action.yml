@@ -31,7 +31,7 @@ runs:
         planner: ${{ inputs.no-init == 'true' && 'linux' || '' }}
 
     - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
-      if: ${{ inputs.use-cache == 'true' }}
+      if: ${{ inputs.use-cache == 'true' && !(runner.os == 'macOS' && runner.arch == 'X64') }}
       with:
         use-flakehub: false
         use-gha-cache: true
