@@ -566,13 +566,13 @@ mod tests {
             .expect("place nix config should succeed");
 
         let standard_conf = tokio::fs::read_to_string(nix_conf_path).await.unwrap();
-        assert!(standard_conf.contains("trusted-user"), "trusted-user setting should exist in standard conf so that we don't break cachix users");
+        assert!(standard_conf.contains("trusted-users"), "trusted-users setting should exist in standard conf so that we don't break cachix users");
 
         let custom_conf = tokio::fs::read_to_string(nix_custom_conf_path)
             .await
             .unwrap();
         assert!(
-            custom_conf.contains("trusted-user"),
+            custom_conf.contains("trusted-users"),
             "trusted-user setting should exist in custom conf as well"
         );
 

@@ -268,7 +268,7 @@ async fn execute_dscl_retry_on_specific_errors(dscl_args: &[&str]) -> Result<(),
             );
             break;
         } else if retry_tokens == 0 {
-            return Err(ActionErrorKind::command_output(&command, output))?;
+            return Err(ActionErrorKind::command_output(&command, output));
         } else {
             if output.status.code() == Some(140) && stderr.contains("-14988 (eNotYetImplemented)") {
                 // Retry due to buggy macOS user behavior?
@@ -384,7 +384,7 @@ pub async fn delete_user_macos(name: &str) -> Result<(), ActionErrorKind> {
         },
         Some(185) if stderr.contains("-14009 (eDSUnknownNodeName)") => {
             // The user has already been deleted
-            tracing::debug!("User already deleted: /Users/{}`", name);
+            tracing::debug!("User already deleted: /Users/{}", name);
         },
         _ => {
             // Something went wrong
