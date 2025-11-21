@@ -9,7 +9,7 @@
     crane.url = "github:ipetkov/crane/v0.20.0";
 
     nix = {
-      url = "github:NixOS/nix/2.32.0";
+      url = "github:NixOS/nix/2.32.4";
       # Omitting `inputs.nixpkgs.follows = "nixpkgs";` on purpose
     };
 
@@ -20,10 +20,12 @@
     { self
     , nixpkgs
     , crane
+    , nix
     , ...
     }:
     let
-      nix_tarball_url_prefix = "https://releases.nixos.org/nix/nix-2.32.0/nix-2.32.0-";
+      nix_version = nix.packages.x86_64-linux.default.version;
+      nix_tarball_url_prefix = "https://releases.nixos.org/nix/nix-${nix_version}/nix-${nix_version}-";
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
       forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: (forSystem system f));
