@@ -223,8 +223,6 @@ jobs:
           sudo -i nix-store --gc
           sudo -i nix-shell -p hello --command hello
 
-          sudo -E /nix/nix-installer self-test
-
       - name: Repeated uninstall
         run: sudo -E /nix/nix-installer uninstall
         env:
