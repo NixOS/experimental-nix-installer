@@ -33,7 +33,7 @@ runs:
         init: ${{ inputs.no-init == 'true' && 'none' || '' }}
         planner: ${{ inputs.no-init == 'true' && 'linux' || '' }}
 
-    - uses: cachix/cachix-action@v15
-      with:
-        name: nix-installer
-        authToken: "${{ inputs.cachix-authtoken}}"
+    #- uses: cachix/cachix-action@v15
+    #  with:
+    #    name: nix-installer
+    #    authToken: "${{ inputs.cachix-authtoken}}"
