@@ -384,7 +384,7 @@ pub async fn delete_user_macos(name: &str) -> Result<(), ActionErrorKind> {
         },
         Some(185) if stderr.contains("-14009 (eDSUnknownNodeName)") => {
             // The user has already been deleted
-            tracing::debug!("User already deleted: /Users/{}`", name);
+            tracing::debug!("User already deleted: /Users/{}", name);
         },
         _ => {
             // Something went wrong
