@@ -92,19 +92,7 @@
             buildPackages = final.buildPackages;
           };
 
-          nix-installer-static =
-            let
-              muslPkgs =
-                if final.stdenv.hostPlatform.isAarch64
-                then final.pkgsCross.aarch64-multiplatform-musl
-                else final.pkgsCross.musl64;
-            in
-            installerPackage {
-              pkgs = muslPkgs;
-              stdenv = muslPkgs.stdenv;
-              buildPackages = final.pkgsBuildHost;
-              extraRustFlags = "-C target-feature=+crt-static";
-            };
+          nix-installer-static = final.pkgsStatic.callPackage installerPackage { };
         };
 
 
