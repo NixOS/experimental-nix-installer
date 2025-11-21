@@ -268,7 +268,7 @@ async fn execute_dscl_retry_on_specific_errors(dscl_args: &[&str]) -> Result<(),
             );
             break;
         } else if retry_tokens == 0 {
-            return Err(ActionErrorKind::command_output(&command, output))?;
+            return Err(ActionErrorKind::command_output(&command, output));
         } else {
             if output.status.code() == Some(140) && stderr.contains("-14988 (eNotYetImplemented)") {
                 // Retry due to buggy macOS user behavior?
