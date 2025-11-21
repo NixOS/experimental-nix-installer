@@ -34,6 +34,9 @@ jobs:
 
       - name: Install Nix
         uses: ./.github/actions/install-nix-action
+        with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
 
       - name: Build the installer
         run: |
@@ -75,6 +78,8 @@ jobs:
 
       - name: Install Nix
         uses: ./.github/actions/install-nix-action
+        with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - name: Check rustfmt
         run: nix develop --command check-rustfmt
@@ -143,6 +148,7 @@ jobs:
       - name: Initial install
         uses: ./.github/actions/install-nix-action
         with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           dogfood: true
           dogfood-path: ${{ steps.download-installer.outputs.download-path }}
           use-cache: false
@@ -187,6 +193,7 @@ jobs:
       - name: Repeated install
         uses: ./.github/actions/install-nix-action
         with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           dogfood: true
           dogfood-path: ${{ steps.download-installer.outputs.download-path }}
           use-cache: false
@@ -273,6 +280,7 @@ jobs:
       - name: Initial install
         uses: ./.github/actions/install-nix-action
         with:
+          cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           dogfood: true
           dogfood-path: ${{ steps.download-installer.outputs.download-path }}
 

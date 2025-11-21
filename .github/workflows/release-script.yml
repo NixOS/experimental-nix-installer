@@ -15,6 +15,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - uses: cachix/install-nix-action@v25
+      with:
+        cachix-authtoken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
     - name: Create draft release
       # The script also depends on gh and git but those are both pre-installed on the runner
       run: nix run --inputs-from .# nixpkgs#python3 -- assemble_installer.py "${{ github.event.inputs.testing_hydra_eval_id }}"
