@@ -5,13 +5,6 @@ let
 in
 {
 
-  # Format
-  check-rustfmt = (writeShellApplication {
-    name = "check-rustfmt";
-    runtimeInputs = with pkgs; [ cargo rustfmt ];
-    text = "cargo fmt --check";
-  });
-
   # Spelling
   check-spelling = (writeShellApplication {
     name = "check-spelling";
@@ -21,15 +14,6 @@ in
         --ignore-words-list="ba,sur,crate,pullrequest,pullrequests,ser,distroname" \
         --skip="./target,.git,./src/action/linux/selinux,*.lock" \
         .
-    '';
-  });
-
-  # NixFormatting
-  check-nixpkgs-fmt = (writeShellApplication {
-    name = "check-nixpkgs-fmt";
-    runtimeInputs = with pkgs; [ git nixpkgs-fmt findutils ];
-    text = ''
-      nixpkgs-fmt --check .
     '';
   });
 

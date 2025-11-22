@@ -13,6 +13,11 @@
       # Omitting `inputs.nixpkgs.follows = "nixpkgs";` on purpose
     };
 
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     flake-compat.url = "github:edolstra/flake-compat/v1.0.0";
   };
 
@@ -21,6 +26,7 @@
     , nixpkgs
     , crane
     , nix
+    , treefmt-nix
     , ...
     }:
     let
@@ -35,6 +41,10 @@
         pkgs = import nixpkgs { inherit system; overlays = [ self.overlays.default ]; };
         lib = pkgs.lib;
       };
+
+      treefmtEval = forAllSystems ({ pkgs, ... }:
+        treefmt-nix.lib.evalModule pkgs ./nix/treefmt.nix
+      );
 
       installerPackage = { pkgs, stdenv, buildPackages, extraRustFlags ? "" }:
         let
@@ -98,7 +108,7 @@
         };
 
 
-      devShells = forAllSystems ({ pkgs, ... }:
+      devShells = forAllSystems ({ system, pkgs, ... }:
         let
           check = import ./nix/check.nix { inherit pkgs; };
         in
@@ -113,17 +123,14 @@
               rustc
               cargo
               clippy
-              rustfmt
               shellcheck
               rust-analyzer
               cargo-outdated
               cacert
               # cargo-audit # NOTE(cole-h): build currently broken because of time dependency and Rust 1.80
               cargo-watch
-              nixpkgs-fmt
-              check.check-rustfmt
+              treefmtEval.${system}.config.build.wrapper
               check.check-spelling
-              check.check-nixpkgs-fmt
               check.check-editorconfig
               check.check-semver
               check.check-clippy
@@ -142,24 +149,14 @@
           };
         });
 
-      checks = forAllSystems ({ pkgs, ... }:
+      checks = forAllSystems ({ system, pkgs, ... }:
         let
           check = import ./nix/check.nix { inherit pkgs; };
         in
         {
-          check-rustfmt = pkgs.runCommand "check-rustfmt" { buildInputs = [ check.check-rustfmt ]; } ''
-            cd ${./.}
-            check-rustfmt
-            touch $out
-          '';
           check-spelling = pkgs.runCommand "check-spelling" { buildInputs = [ check.check-spelling ]; } ''
             cd ${./.}
             check-spelling
-            touch $out
-          '';
-          check-nixpkgs-fmt = pkgs.runCommand "check-nixpkgs-fmt" { buildInputs = [ check.check-nixpkgs-fmt ]; } ''
-            cd ${./.}
-            check-nixpkgs-fmt
             touch $out
           '';
           check-editorconfig = pkgs.runCommand "check-editorconfig" { buildInputs = [ pkgs.git check.check-editorconfig ]; } ''
@@ -167,6 +164,7 @@
             check-editorconfig
             touch $out
           '';
+          formatting = treefmtEval.${system}.config.build.check self;
         });
 
       packages = forAllSystems ({ system, pkgs, ... }:
@@ -181,6 +179,10 @@
         } // nixpkgs.lib.optionalAttrs (pkgs.stdenv.isDarwin) {
           default = pkgs.nix-installer;
         });
+
+      formatter = forAllSystems ({ system, ... }:
+        treefmtEval.${system}.config.build.wrapper
+      );
 
       hydraJobs = {
         build = forAllSystems ({ system, pkgs, ... }: self.packages.${system}.default);
