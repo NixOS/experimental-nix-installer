@@ -1,5 +1,5 @@
-use nix::unistd::{chown, Group, User};
-use tracing::{span, Span};
+use nix::unistd::{Group, User, chown};
+use tracing::{Span, span};
 
 use std::{
     os::{unix::fs::MetadataExt, unix::fs::PermissionsExt},
@@ -364,13 +364,13 @@ mod test {
                 _ => {
                     return Err(eyre!(
                         "Should have returned an ActionErrorKind::Exists error"
-                    ))
+                    ));
                 },
             },
             _ => {
                 return Err(eyre!(
                     "Should have returned an ActionErrorKind::Exists error"
-                ))
+                ));
             },
         };
 
@@ -409,13 +409,13 @@ mod test {
                 _ => {
                     return Err(eyre!(
                         "Should have returned an ActionErrorKind::PathModeMismatch error"
-                    ))
+                    ));
                 },
             },
             _ => {
                 return Err(eyre!(
                     "Should have returned an ActionErrorKind::PathModeMismatch error"
-                ))
+                ));
             },
         }
 
@@ -472,13 +472,13 @@ mod test {
                 _ => {
                     return Err(eyre!(
                         "Should have returned an ActionErrorKind::PathWasNotFile error"
-                    ))
+                    ));
                 },
             },
             _ => {
                 return Err(eyre!(
                     "Should have returned an ActionErrorKind::PathWasNotFile error"
-                ))
+                ));
             },
         }
 

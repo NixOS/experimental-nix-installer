@@ -1,13 +1,13 @@
 use std::str::FromStr;
-use tracing::{span, Span};
+use tracing::{Span, span};
 
 use super::CreateNixTree;
 use crate::{
     action::{
-        base::{FetchAndUnpackNix, MoveUnpackedNix},
         Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction,
+        base::{FetchAndUnpackNix, MoveUnpackedNix},
     },
-    settings::{CommonSettings, UrlOrPath, SCRATCH_DIR},
+    settings::{CommonSettings, SCRATCH_DIR, UrlOrPath},
 };
 use std::os::unix::fs::MetadataExt as _;
 use std::path::PathBuf;

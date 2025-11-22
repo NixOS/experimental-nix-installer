@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use bytes::{Buf, Bytes};
 use reqwest::Url;
-use tracing::{span, Span};
+use tracing::{Span, span};
 
 use crate::{
     action::{Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction},

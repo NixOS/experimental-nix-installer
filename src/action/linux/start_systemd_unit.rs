@@ -1,5 +1,5 @@
 use tokio::process::Command;
-use tracing::{span, Span};
+use tracing::{Span, span};
 
 use crate::action::{ActionError, ActionErrorKind, ActionState, ActionTag, StatefulAction};
 use crate::execute_command;

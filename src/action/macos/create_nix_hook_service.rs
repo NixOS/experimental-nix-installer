@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tracing::{span, Span};
+use tracing::{Span, span};
 
 use std::{path::PathBuf, process::Stdio};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt, process::Command};

@@ -3,7 +3,7 @@ use std::process::Stdio;
 use nix::unistd::User;
 use target_lexicon::OperatingSystem;
 use tokio::process::Command;
-use tracing::{span, Span};
+use tracing::{Span, span};
 
 use crate::action::{ActionError, ActionErrorKind};
 use crate::execute_command;

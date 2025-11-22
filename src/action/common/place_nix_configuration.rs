@@ -1,4 +1,4 @@
-use tracing::{span, Span};
+use tracing::{Span, span};
 use url::Url;
 
 use crate::action::base::create_or_merge_nix_config::{
@@ -425,9 +425,11 @@ mod tests {
                 .await?;
         dbg!(&custom_nix_config);
         dbg!(custom_nix_config.settings());
-        dbg!(custom_nix_config
-            .settings()
-            .get(EXTRA_EXPERIMENTAL_FEATURES_CONF_NAME));
+        dbg!(
+            custom_nix_config
+                .settings()
+                .get(EXTRA_EXPERIMENTAL_FEATURES_CONF_NAME)
+        );
 
         assert!(
             custom_nix_config
@@ -566,7 +568,10 @@ mod tests {
             .expect("place nix config should succeed");
 
         let standard_conf = tokio::fs::read_to_string(nix_conf_path).await.unwrap();
-        assert!(standard_conf.contains("trusted-user"), "trusted-user setting should exist in standard conf so that we don't break cachix users");
+        assert!(
+            standard_conf.contains("trusted-user"),
+            "trusted-user setting should exist in standard conf so that we don't break cachix users"
+        );
 
         let custom_conf = tokio::fs::read_to_string(nix_custom_conf_path)
             .await

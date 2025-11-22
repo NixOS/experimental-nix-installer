@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use tracing::{span, Span};
+use tracing::{Span, span};
 use uuid::Uuid;
 
 use super::get_disk_info_for_label;
@@ -68,7 +68,7 @@ impl Action for CreateFstabEntry {
             None => {
                 return Err(Self::error(CreateFstabEntryError::CannotDetermineUuid(
                     self.apfs_volume_label.clone(),
-                )))?
+                )))?;
             },
         };
 
@@ -176,13 +176,17 @@ impl Action for CreateFstabEntry {
 }
 
 fn fstab_entry(uuid: &Uuid) -> String {
-    format!("UUID={uuid} /nix apfs rw,noatime,noauto,nobrowse,nosuid,owners # Added by the Determinate Nix Installer")
+    format!(
+        "UUID={uuid} /nix apfs rw,noatime,noauto,nobrowse,nosuid,owners # Added by the Determinate Nix Installer"
+    )
 }
 
 #[non_exhaustive]
 #[derive(thiserror::Error, Debug)]
 pub enum CreateFstabEntryError {
-    #[error("Unable to determine how to add APFS volume `{0}` the `/etc/fstab` line, likely the volume is not yet created or there is some synchronization issue, please report this")]
+    #[error(
+        "Unable to determine how to add APFS volume `{0}` the `/etc/fstab` line, likely the volume is not yet created or there is some synchronization issue, please report this"
+    )]
     CannotDetermineUuid(String),
 }
 

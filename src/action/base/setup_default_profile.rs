@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
 use crate::{
-    action::{common::ConfigureNix, ActionError, ActionErrorKind, ActionTag, StatefulAction},
+    action::{ActionError, ActionErrorKind, ActionTag, StatefulAction, common::ConfigureNix},
     profile::WriteToDefaultProfile,
     set_env,
 };
 
 use tokio::{io::AsyncWriteExt, process::Command};
-use tracing::{span, Span};
+use tracing::{Span, span};
 
 use crate::action::{Action, ActionDescription};
 

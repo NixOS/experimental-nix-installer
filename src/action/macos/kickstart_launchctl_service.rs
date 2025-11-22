@@ -1,7 +1,7 @@
 use std::process::Output;
 
 use tokio::process::Command;
-use tracing::{span, Span};
+use tracing::{Span, span};
 
 use crate::action::{ActionError, ActionErrorKind, ActionTag, StatefulAction};
 
@@ -129,7 +129,7 @@ impl Action for KickstartLaunchctlService {
             _ => {
                 return Err(Self::error(ActionErrorKind::Custom(Box::new(
                     KickstartLaunchctlServiceError::CannotStopService(command_str, output),
-                ))))
+                ))));
             },
         }
 

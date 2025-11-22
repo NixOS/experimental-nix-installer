@@ -2,9 +2,9 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     action::{
+        Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction,
         base::SetupDefaultProfile,
         common::{ConfigureShellProfile, PlaceNixConfiguration},
-        Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction,
     },
     planner::ShellProfileLocations,
     settings::{CommonSettings, SCRATCH_DIR},
@@ -13,7 +13,7 @@ use glob::glob;
 
 use crate::action::common::SetupChannels;
 
-use tracing::{span, Instrument, Span};
+use tracing::{Instrument, Span, span};
 
 /**
 Configure Nix and start it
@@ -289,7 +289,9 @@ pub enum ConfigureNixError {
     NoNssCacert,
     #[error("Unarchived Nix store did not appear to include a `nix` location")]
     NoNix,
-    #[error("Unarchived Nix store appears to contain multiple `nss-ca-cert` packages, cannot select one")]
+    #[error(
+        "Unarchived Nix store appears to contain multiple `nss-ca-cert` packages, cannot select one"
+    )]
     MultipleNssCaCertPackages,
     #[error("Unarchived Nix store appears to contain multiple `nix` packages, cannot select one")]
     MultipleNixPackages,

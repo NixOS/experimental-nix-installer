@@ -4,8 +4,8 @@ use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 
 #[cfg(feature = "cli")]
 use clap::{
-    error::{ContextKind, ContextValue},
     ArgAction,
+    error::{ContextKind, ContextValue},
 };
 use url::Url;
 
@@ -224,7 +224,7 @@ impl CommonSettings {
             _ => {
                 return Err(InstallSettingsError::UnsupportedArchitecture(
                     target_lexicon::HOST,
-                ))
+                ));
             },
         };
 
@@ -377,7 +377,7 @@ impl InitSettings {
             _ => {
                 return Err(InstallSettingsError::UnsupportedArchitecture(
                     target_lexicon::HOST,
-                ))
+                ));
             },
         };
 

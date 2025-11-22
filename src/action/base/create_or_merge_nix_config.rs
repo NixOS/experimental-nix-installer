@@ -6,7 +6,7 @@ use std::{
 use nix_config_parser::NixConfig;
 use rand::Rng;
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
-use tracing::{span, Span};
+use tracing::{Span, span};
 
 use crate::{
     action::{Action, ActionDescription, ActionError, ActionErrorKind, ActionTag, StatefulAction},
@@ -695,8 +695,8 @@ mod test {
                         },
                         _ => {
                             return Err(eyre!(
-                        "Should have returned CreateOrMergeNixConfigError::UnmergeableConfig"
-                    ))
+                                "Should have returned CreateOrMergeNixConfigError::UnmergeableConfig"
+                            ));
                         },
                     }
                 }
@@ -704,7 +704,7 @@ mod test {
             _ => {
                 return Err(eyre!(
                     "Should have returned CreateOrMergeNixConfigError::UnmergeableConfig"
-                ))
+                ));
             },
         }
 
