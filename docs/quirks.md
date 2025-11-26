@@ -1,6 +1,6 @@
 ## Quirks
 
-While Determinate Nix Installer tries to provide a comprehensive and unquirky experience, there are unfortunately some issues that may require manual intervention or operator choices.
+While the experimental Nix Installer tries to provide a comprehensive and unquirky experience, there are unfortunately some issues that may require manual intervention or operator choices.
 
 ### Using MacOS after removing Nix while nix-darwin was still installed, network requests fail
 
