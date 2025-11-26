@@ -10,38 +10,18 @@ If you used the **Determinate Nix Installer**, report issues at https://github.c
 
 ---
 
-# Determinate Nix Installer
-
 [![Crates.io](https://img.shields.io/crates/v/nix-installer)](https://crates.io/crates/nix-installer)
-[![CI](https://github.com/DeterminateSystems/nix-installer/actions/workflows/ci.yml/badge.svg)](https://github.com/DeterminateSystems/nix-installer/actions)
 [![Docs.rs](https://img.shields.io/docsrs/nix-installer)](https://docs.rs/nix-installer/latest/nix_installer)
-[![License](https://img.shields.io/github/license/DeterminateSystems/nix-installer)](https://github.com/DeterminateSystems/nix-installer/blob/main/LICENSE)
-[![Discord](https://img.shields.io/discord/1116012109709463613)](https://determinate.systems/discord)
 
-**Determinate Nix Installer** is the easiest and most reliable way to install [Nix]&mdash;as well as our longest-running project.
 
-When we created Determinate Nix, we added support for it directly into the installer via the `--determinate` flag.
-
-The installer works across a wide range of environments, including macOS, Linux, Windows Subsystem for Linux (WSL), SELinux, the Valve Steam Deck, and more.
-It can install either [Nix](https://nixos.org) or [Determinate Nix][det-nix] (with [flakes] enabled by default), it offers support for seamlessly [uninstalling Nix](#uninstalling), it enables Nix to survive [macOS upgrades][macos-upgrades], and [much more](#features).
-
-The quickest way to have a great Nix experience is with [Determinate Nix][det-nix].
-This one liner will do just that on any supported system:
+This one-liner is the quickest way to get started on any supported system:
 
 ```shell
-curl -fsSL https://install.determinate.systems/nix | sh -s -- install --determinate
+curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | \
+  sh -s -- install
 ```
 
-If you'd prefer upstream Nix:
 
-```shell
-curl -fsSL https://install.determinate.systems/nix | sh -s -- install
-```
-
-> [!TIP]
-> The **best way to get Determinate Nix on macOS** is with the <a href="https://install.determinate.systems/determinate-pkg/stable/Universal">macOS package</a>.
-
-Determinate Nix Installer successfully completes **tens of thousands** of installs every day in a number of environments, including [Github Actions](#as-a-github-action) and [GitLab](#on-gitlab):
 
 | Platform                                                             |    Multi user?    | `root` only |     Maturity      |
 | -------------------------------------------------------------------- | :---------------: | :---------: | :---------------: |
@@ -52,44 +32,24 @@ Determinate Nix Installer successfully completes **tens of thousands** of instal
 | [Podman] Linux containers                                            | ✓ (via [systemd]) |      ✓      |      Stable       |
 | [Docker] containers                                                  |                   |      ✓      |      Stable       |
 
-### As a Github Action
+## Install Nix
 
-You can install Determinate Nix on [GitHub Actions][actions] using [`determinate-nix-action`][determinate-nix-action].
-Here's an example configuration:
+You can install Nix with the default [planner](#planners) and options by running this script:
 
-```yaml
-on:
-  pull_request:
-  push:
-    branches: [main]
-
-jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/determinate-nix-action@v3
-      - name: Run `nix build`
-        run: nix build .
+```shell
+curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | \
+  sh -s -- install
 ```
 
-If you would rather use upstream Nix, use [`nix-installer-action`][nix-installer-action]:
+To download a platform-specific installer binary yourself:
 
-```yaml
-jobs:
-  build:
-    steps:
-      - uses: DeterminateSystems/nix-installer-action@main
+```shell
+curl -sL -o nix-installer https://artifacts.nixos.org/experimental-installer/nix-installer-x86_64-linux
+chmod +x nix-installer
+./nix-installer
 ```
 
-#### Pinning the GitHub Action
-
-The [determinate-nix-action] is updated and tagged for every Determinate release.
-For example, `DeterminateSystems/determinate-nix-action@v3.5.2` will always install Determinate Nix v3.5.2.
-
-Additionally, an extra tag on the major version is kept up to date with the current release.
-The `DeterminateSystems/determinate-nix-action@v3` reference, for example, installs the most recent release in the `v3.x.y` series.
+This would install Nix on an `x86_64-linux` system but you can replace that with the system of your choice.
 
 ### Planners
 
@@ -110,7 +70,7 @@ To see the options for Linux, for example:
 You can configure planners using environment variables or command arguments:
 
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
+curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | \
   NIX_BUILD_GROUP_NAME=nixbuilder sh -s -- install --nix-build-group-id 4000
 
 # Alternatively:
@@ -153,7 +113,7 @@ On the default [GitLab] runners, you can install Nix using this configuration:
 ```yaml
 test:
   script:
-    - curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux --no-confirm --init none
+    - curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | sh -s -- install linux --no-confirm --init none
     - . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
     - nix run nixpkgs#hello
     - nix profile install nixpkgs#hello
@@ -174,7 +134,7 @@ If you are using different runners, the above example may need to be adjusted.
 If you don't use [systemd], you can still install Nix by explicitly specifying the `linux` plan and `--init none`:
 
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
+curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | \
   sh -s -- install linux --init none
 ```
 
@@ -209,7 +169,7 @@ For containers (without an init):
 FROM ubuntu:latest
 RUN apt update -y
 RUN apt install curl -y
-RUN curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux \
+RUN curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | sh -s -- install linux \
   --extra-conf "sandbox = false" \
   --init none \
   --no-confirm
@@ -234,7 +194,7 @@ For containers with a [systemd] init:
 FROM ubuntu:latest
 RUN apt update -y
 RUN apt install curl systemd -y
-RUN curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux \
+RUN curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | sh -s -- install linux \
   --extra-conf "sandbox = false" \
   --no-start-daemon \
   --no-confirm
@@ -260,7 +220,7 @@ Omitting this will negatively impact compatibility with container tools like [Po
 We **strongly recommend** first [enabling systemd][enabling-systemd] and then installing Nix as normal:
 
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
+curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | \
   sh -s -- install
 ```
 
@@ -286,7 +246,7 @@ If enabling systemd is not an option, pass `--init none` at the end of the comma
 > ```
 
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
+curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | \
   sh -s -- install linux --init none
 ```
 
@@ -295,12 +255,9 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 If you'd like to bypass the confirmation step, you can apply the `--no-confirm` flag:
 
 ```shell
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
+curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer | \
   sh -s -- install --no-confirm
 ```
-
-> [!TIP]
-> If you're looking for Determinate Nix, make sure to pass `--determinate` at the same time.
 
 This is especially useful when using the installer in non-interactive scripts.
 
@@ -310,10 +267,8 @@ Existing Nix installation scripts do a good job but they are difficult to mainta
 
 Subtle differences in the shell implementations and tool used in the scripts make it difficult to make meaningful changes to the installer.
 
-Determinate Nix installer has numerous advantages over these options:
+The experimental Nix installer has numerous advantages over these options:
 
-- It installs Nix with [flakes] enabled by default
-- It enables Nix to [survive macOS upgrades][survival-mode]
 - It keeps an installation _receipt_ for easy [uninstallation](#uninstalling)
 - It uses [planners](#planners) to create appropriate install plans for complicated targets&mdash;plans that you can review prior to installation
 - It enables you to perform a best-effort reversion in the facing of a failed install
@@ -330,7 +285,7 @@ The working group maintains a [foundation-owned fork of the installer][forked-in
 
 ## Quirks
 
-While Determinate Nix Installer tries to provide a comprehensive and unquirky experience, there are unfortunately some issues that may require manual intervention or operator choices.
+While the experimental Nix Installer tries to provide a comprehensive and unquirky experience, there are unfortunately some issues that may require manual intervention or operator choices.
 See [this document](./docs/quirks.md) for information on resolving these issues:
 
 - [Using MacOS after removing Nix while nix-darwin was still installed, network requests fail](./docs/quirks.md#using-macos-after-removing-nix-while-nix-darwin-was-still-installed-network-requests-fail)
@@ -351,11 +306,21 @@ Here's an example:
 
 ```shell
 VERSION="v0.6.0"
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix/tag/${VERSION} | \
+curl --proto '=https' --tlsv1.2 -sSf -L https://artifacts.nixos.org/experimental-installer/tag/${VERSION}/nix-installer.sh | \
   sh -s -- install
 ```
 
 To discover which versions are available, or download the binaries for any release, check the [Github Releases][releases].
+
+You can download and use these releases directly.
+Here's an example:
+
+```shell
+VERSION="v0.6.0"
+ARCH="aarch64-linux"
+curl -sSf -L https://github.com/NixOS/experimental-nix-installer/releases/download/${VERSION}/nix-installer-${ARCH} -o nix-installer
+./nix-installer install
+```
 
 Each installer version has an [associated supported nix version](src/settings.rs)&mdash;if you pin the installer version, you'll also indirectly pin to the associated nix version.
 
@@ -369,17 +334,8 @@ Here are some example Nix package URLs, including the Nix version, OS, and archi
 
 Differing from the upstream [Nix][upstream-nix] installer scripts:
 
-- In `nix.conf`:
-  - the `nix-command` and `flakes` features are enabled
-  - `bash-prompt-prefix` is set
-  - `auto-optimise-store` is set to `true` (On Linux only)
-  * `always-allow-substitutes` is set to `true`
-  * `extra-nix-path` is set to `nixpkgs=flake:nixpkgs`
-  * `max-jobs` is set to `auto`
-  * `upgrade-nix-store-path-url` is set to `https://install.determinate.systems/nix-upgrade/stable/universal`, to prevent unintentional downgrades.
-- an installation receipt (for uninstalling) is stored at `/nix/receipt.json` as well as a copy of the install binary at `/nix/nix-installer`
-- `nix-channel --update` is not run, `~/.nix-channels` is not provisioned
-- `ssl-cert-file` is set in `/etc/nix/nix.conf` if the `ssl-cert-file` argument is used.
+* an installation receipt (for uninstalling) is stored at `/nix/receipt.json` as well as a copy of the install binary at `/nix/nix-installer`
+* `ssl-cert-file` is set in `/etc/nix/nix.conf` if the `ssl-cert-file` argument is used.
 
 ## Installer settings
 
@@ -400,7 +356,6 @@ These settings are available for all commands.
 
 | Flag(s)                    | Description                                                                                        | Default (if any)                     | Environment variable                   |
 | -------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------- |
-| `--determinate`            | Installs [Determinate]                                                                             | `NIX_INSTALLER_DETERMINATE`          |
 | `--explain`                | Provide an explanation of the changes the installation process will make to your system            | `false`                              | `NIX_INSTALLER_EXPLAIN`                |
 | `--extra-conf`             | Extra configuration lines for `/etc/nix.conf`                                                      |                                      | `NIX_INSTALLER_EXTRA_CONF`             |
 | `--force`                  | Whether the installer should forcibly recreate files it finds existing                             | `false`                              | `NIX_INSTALLER_FORCE`                  |
@@ -463,7 +418,6 @@ nix-installer uninstall /path/to/receipt.json
 [det-nix]: https://docs.determinate.systems/determinate-nix
 [determinate]: https://docs.determinate.systems
 [determinate-flake]: https://github.com/DeterminateSystems/determinate
-[determinate-nix-action]: https://github.com/DeterminateSystems/determinate-nix-action
 [detsys]: https://determinate.systems
 [docker]: https://docker.com
 [enabling-systemd]: https://devblogs.microsoft.com/commandline/systemd-support-is-now-available-in-wsl/#how-can-you-get-systemd-on-your-machine
@@ -481,12 +435,11 @@ nix-installer uninstall /path/to/receipt.json
 [podman]: https://podman.io
 [privacy]: https://determinate.systems/policies/privacy
 [private-flakes]: https://docs.determinate.systems/flakehub/private-flakes
-[releases]: https://github.com/DeterminateSystems/nix-installer/releases
+[releases]: https://github.com/NixOS/experimental-nix-installer/releases
 [rust]: https://rust-lang.org
 [selinux]: https://selinuxproject.org
 [semver]: https://docs.determinate.systems/flakehub/concepts/semver
 [steam-deck]: https://store.steampowered.com/steamdeck
-[survival-mode]: https://determinate.systems/posts/nix-survival-mode-on-macos
 [systemd]: https://systemd.io
 [upstream-nix]: https://github.com/NixOS/nix
 [wg]: https://discourse.nixos.org/t/nix-installer-workgroup/21495
